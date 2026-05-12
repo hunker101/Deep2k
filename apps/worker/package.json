@@ -1,0 +1,21 @@
+{
+  "name": "@deep2k/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 8787",
+    "deploy": "wrangler deploy",
+    "build": "echo \"wrangler build happens at deploy time\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "echo \"no tests in @deep2k/worker\"",
+    "lint": "echo \"no lint in @deep2k/worker\""
+  },
+  "dependencies": {
+    "@deep2k/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241106.0",
+    "wrangler": "^3.86.0"
+  }
+}

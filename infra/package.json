@@ -1,0 +1,22 @@
+{
+  "name": "@deep2k/infra",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "seed:pilot": "tsx scripts/seed-pilot.ts",
+    "build": "echo \"no build in @deep2k/infra\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "echo \"no tests in @deep2k/infra\"",
+    "lint": "echo \"no lint in @deep2k/infra\""
+  },
+  "dependencies": {
+    "@deep2k/db": "workspace:*",
+    "@deep2k/shared": "workspace:*",
+    "@deep2k/tracker-generator": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsx": "^4.19.2"
+  }
+}

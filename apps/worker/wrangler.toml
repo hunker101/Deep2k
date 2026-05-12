@@ -1,0 +1,11 @@
+name = "deep2k-worker"
+main = "src/index.ts"
+compatibility_date = "2024-11-06"
+
+# Dev-only vars. In prod these come from the dashboard runtime config + KV.
+[vars]
+BACKEND_URL = "http://localhost:3000/ingest"
+DAILY_SALT = "dev-salt-default-rotate-me"
+# JSON map: { "<host>": { "id": "<uuid>", "secret": "<hex>", "endpoint_path": "/_/p" } }
+# Populate after `pnpm seed:pilot` prints the snippet.
+SITES_JSON = "{}"

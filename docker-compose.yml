@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: deep2k-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: deep2k
+      POSTGRES_PASSWORD: deep2k
+      POSTGRES_DB: deep2k
+    ports:
+      - "5432:5432"
+    volumes:
+      - deep2k-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U deep2k -d deep2k"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  deep2k-pg:
