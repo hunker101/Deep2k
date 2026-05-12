@@ -35,7 +35,7 @@ export function ingestRouter(db: Db): Router {
       return;
     }
 
-    await enqueue(parsed.data);
+    enqueue(parsed.data);
     res.status(204).end();
   });
 

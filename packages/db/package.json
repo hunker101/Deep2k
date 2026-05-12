@@ -14,7 +14,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "echo \"no tests in @deep2k/db\"",
     "lint": "echo \"no lint in @deep2k/db\"",
-    "db:migrate": "tsx src/migrate.ts",
+    "db:migrate": "tsx --env-file=../../.env src/migrate.ts",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {

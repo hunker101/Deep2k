@@ -8,4 +8,4 @@ BACKEND_URL = "http://localhost:3000/ingest"
 DAILY_SALT = "dev-salt-default-rotate-me"
 # JSON map: { "<host>": { "id": "<uuid>", "secret": "<hex>", "endpoint_path": "/_/p" } }
 # Populate after `pnpm seed:pilot` prints the snippet.
-SITES_JSON = "{}"
+SITES_JSON = '{"pilot-1.example.com":{"id":"a4327c60-07af-47de-ac3b-a4c3f3161210","secret":"227c4b9ac895715ae96e64c56fe65493c84c13192fb2758f58b5605627501805","endpoint_path":"/api/r"},"pilot-2.example.com":{"id":"03725abf-85b5-4644-b2e5-527bc757e807","secret":"63fecbd5dd8d8909ef2e754087918baf4cf6189d076f0ee0b957320a819b66f6","endpoint_path":"/static/_e"},"pilot-3.example.com":{"id":"7ca52635-f7b8-4cd5-9d3a-4e735ea7113a","secret":"55aa87190de05f2544e0831861d5e3034013eacd52c92f7d6f33e7ad1ef46715","endpoint_path":"/_/p"},"pilot-4.example.com":{"id":"56face17-dcc2-48b3-83a6-02a00af539d9","secret":"140d88b532dd7138e1f414c2c45b1106aa7ea61e4977cc8a94864f50ddcada6d","endpoint_path":"/static/_e"},"pilot-5.example.com":{"id":"8ac16aa8-ac9a-4e59-a3aa-f6a7be1dd173","secret":"a2ac10a337c4b75298ac1ea44c24bca19b03187673824d7409922b22d45f24bd","endpoint_path":"/_/p"}}'

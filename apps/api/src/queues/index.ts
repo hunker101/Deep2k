@@ -1,12 +1,50 @@
+import { events, type Db } from '@deep2k/db';
 import type { IngestEvent } from '@deep2k/shared';
 
-// Phase 2: replace with Cloudflare Queues / BullMQ. See ./README.md.
-// For now this just logs so worker→api forwarding is visible during dev.
-export async function enqueue(event: IngestEvent): Promise<void> {
-  // TODO Phase 2: insert into events table here, batched.
-  console.log('[queue] enqueue', {
-    site_id: event.site_id,
-    path: event.path,
-    visitor_id: event.visitor_id,
-  });
+const MAX_BATCH = 100;
+const MAX_DELAY_MS = 1000;
+
+let buffer: IngestEvent[] = [];
+let timer: NodeJS.Timeout | null = null;
+let dbRef: Db | null = null;
+
+export function initQueue(db: Db): void {
+  dbRef = db;
+}
+
+export function enqueue(event: IngestEvent): void {
+  buffer.push(event);
+  if (buffer.length >= MAX_BATCH) {
+    void flush();
+  } else if (!timer) {
+    timer = setTimeout(() => {
+      void flush();
+    }, MAX_DELAY_MS);
+  }
+}
+
+export async function flush(): Promise<void> {
+  if (timer) {
+    clearTimeout(timer);
+    timer = null;
+  }
+  if (!dbRef || buffer.length === 0) return;
+  const batch = buffer;
+  buffer = [];
+  try {
+    await dbRef.insert(events).values(
+      batch.map((e) => ({
+        siteId: e.site_id,
+        visitorId: e.visitor_id,
+        path: e.path,
+        referrer: e.referrer,
+        country: e.country,
+        device: e.device,
+        timestamp: new Date(e.timestamp),
+      })),
+    );
+    console.log(`[queue] flushed ${batch.length} events`);
+  } catch (err) {
+    console.error('[queue] flush failed, dropping', batch.length, 'events:', err);
+  }
 }
