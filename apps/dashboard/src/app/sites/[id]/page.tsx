@@ -66,12 +66,12 @@ export default async function SitePage({
     <div className="min-h-screen bg-[#080f0c]">
       {/* Nav */}
       <header className="border-b border-[#1a2e22] px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
           </svg>
           <span className="text-white font-semibold">Deep<span className="text-emerald-400">2K</span></span>
-        </div>
+        </Link>
         <span className="text-[#6b8f7a] text-sm font-mono hidden sm:block">{today}</span>
         <a href="/api/logout" className="text-[#6b8f7a] hover:text-white text-xs font-mono px-2 py-1.5 transition-colors">Sign out</a>
       </header>
@@ -80,9 +80,15 @@ export default async function SitePage({
         {/* Breadcrumb + title */}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-mono text-[#6b8f7a] mb-1">
-              <Link href="/" className="hover:text-emerald-400">← Back to all sites</Link>
-            </p>
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 text-base font-medium text-emerald-400 hover:text-white bg-[#1a2e22] hover:bg-[#213d2a] border border-[#2a4a32] px-4 py-2 rounded-lg transition-all mb-3"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 12H5M12 5l-7 7 7 7"/>
+              </svg>
+              Back to all sites
+            </Link>
             <p className="text-xs font-mono text-[#6b8f7a] mb-1">SITES / {site?.domain.toUpperCase() ?? id.toUpperCase()}</p>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold">{site?.domain ?? id}</h1>

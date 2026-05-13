@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { fetchSitesSummary, fetchOverview } from '@/lib/api';
 import { TrafficChart } from '@/components/TrafficChart';
-import type { SiteSummaryRow } from '@/lib/api';
+import { SitesTable } from '@/components/SitesTable';
 
 const PERIODS = [
   { key: 'today', label: 'Today' },
@@ -13,17 +13,13 @@ const PERIODS = [
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string; q?: string }>;
+  searchParams: Promise<{ period?: string }>;
 }) {
-  const { period = '7d', q = '' } = await searchParams;
+  const { period = '7d' } = await searchParams;
   const [sites, overview] = await Promise.all([
     fetchSitesSummary(period).catch(() => []),
     fetchOverview(period).catch(() => ({ totalPageviews: 0, totalVisitors: 0, siteCount: 0, daily: [] })),
   ]);
-
-  const filtered = q
-    ? sites.filter(s => s.domain.toLowerCase().includes(q.toLowerCase()))
-    : sites;
 
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -70,85 +66,50 @@ export default async function HomePage({
         </div>
 
         {/* Combined chart */}
-        <div className="bg-[#0d1a14] border border-[#1a2e22] rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4">
+        <div className="bg-[#0d1a14] border border-[#1a2e22] rounded-xl overflow-hidden">
+          {/* Chart header */}
+          <div className="px-5 pt-5 pb-4 flex flex-wrap items-start justify-between gap-4 border-b border-[#1a2e22]">
             <div>
-              <h2 className="text-sm font-semibold">Traffic — all sites combined</h2>
-              <p className="text-xs text-[#6b8f7a] font-mono mt-0.5">Daily totals · {period === '7d' ? '7 days' : period === '30d' ? '30 days' : period === 'month' ? 'this month' : 'today'}</p>
+              <h2 className="text-sm font-semibold text-white">Traffic — all sites combined</h2>
+              <p className="text-xs text-[#4a7060] font-mono mt-0.5">
+                Daily totals · {period === '7d' ? '7 days' : period === '30d' ? '30 days' : period === 'month' ? 'this month' : 'today'}
+              </p>
             </div>
-            <div className="flex items-center gap-4 text-xs font-mono">
-              <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-emerald-400 inline-block rounded"/>Visitors</span>
-              <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-sky-400 inline-block rounded"/>Pageviews</span>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 bg-[#0a1a10] border border-[#1a2e22] rounded-lg px-3 py-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]" />
+                <span className="text-xs text-[#6b8f7a] font-mono">Visitors</span>
+                <span className="text-sm font-bold text-white font-mono tabular-nums">{overview.totalVisitors.toLocaleString()}</span>
+              </div>
+              <div className="flex items-center gap-2 bg-[#0a1a10] border border-[#1a2e22] rounded-lg px-3 py-2">
+                <span className="w-2 h-2 rounded-full bg-sky-400 shadow-[0_0_6px_#38bdf8]" />
+                <span className="text-xs text-[#6b8f7a] font-mono">Pageviews</span>
+                <span className="text-sm font-bold text-white font-mono tabular-nums">{overview.totalPageviews.toLocaleString()}</span>
+              </div>
             </div>
           </div>
-          {overview.daily.length === 0 ? (
-            <div className="h-40 flex items-center justify-center text-[#6b8f7a] text-sm font-mono">No data yet — run aggregation after events are ingested</div>
-          ) : (
-            <TrafficChart data={overview.daily} />
-          )}
+          {/* Chart body */}
+          <div className="px-3 pt-4 pb-2">
+            {overview.daily.length === 0 ? (
+              <div className="h-48 flex flex-col items-center justify-center gap-2 text-[#4a7060]">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                </svg>
+                <span className="text-sm font-mono">No data yet — inject events then run aggregation</span>
+              </div>
+            ) : (
+              <TrafficChart data={overview.daily} />
+            )}
+          </div>
         </div>
 
         {/* Sites table */}
-        <div className="bg-[#0d1a14] border border-[#1a2e22] rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-[#1a2e22] flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <span className="font-semibold text-sm">Sites</span>
-              <span className="text-[#6b8f7a] font-mono text-xs ml-2">{filtered.length} of {sites.length} shown</span>
-            </div>
-            <SearchBar value={q} period={period} />
-          </div>
-
-          {filtered.length === 0 ? (
-            <div className="p-12 text-center text-[#6b8f7a] text-sm font-mono">
-              {q ? `No sites matching "${q}"` : 'No sites yet. Run pnpm seed:pilot or POST to /api/sites.'}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[#1a2e22] text-left">
-                    <th className="px-5 py-3 text-xs font-mono text-[#6b8f7a] uppercase tracking-wide">Site domain</th>
-                    <th className="px-5 py-3 text-xs font-mono text-[#6b8f7a] uppercase tracking-wide text-right">Visitors</th>
-                    <th className="px-5 py-3 text-xs font-mono text-[#6b8f7a] uppercase tracking-wide text-right">Pageviews</th>
-                    <th className="px-5 py-3 text-xs font-mono text-[#6b8f7a] uppercase tracking-wide">Endpoint</th>
-                    <th className="px-5 py-3 text-xs font-mono text-[#6b8f7a] uppercase tracking-wide">Beacon</th>
-                    <th className="px-5 py-3 text-xs font-mono text-[#6b8f7a] uppercase tracking-wide">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#1a2e22]">
-                  {filtered.map(s => <SiteRow key={s.id} site={s} />)}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+        <SitesTable sites={sites} />
       </main>
     </div>
   );
 }
 
-function SiteRow({ site }: { site: SiteSummaryRow }) {
-  return (
-    <tr className="hover:bg-[#0f2018] transition-colors group">
-      <td className="px-5 py-3">
-        <Link href={`/sites/${site.id}`} className="flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
-          <span className="text-emerald-400 font-mono hover:underline">{site.domain}</span>
-        </Link>
-      </td>
-      <td className="px-5 py-3 text-right font-mono tabular-nums text-white">{site.totalVisitors.toLocaleString()}</td>
-      <td className="px-5 py-3 text-right font-mono tabular-nums text-white">{site.totalPageviews.toLocaleString()}</td>
-      <td className="px-5 py-3 font-mono text-[#6b8f7a] text-xs">{site.endpointPath}</td>
-      <td className="px-5 py-3 font-mono text-[#6b8f7a] text-xs">{site.beaconMethod}</td>
-      <td className="px-5 py-3">
-        <span className="inline-flex items-center gap-1.5 bg-emerald-400/10 text-emerald-400 border border-emerald-400/20 text-xs font-mono px-2 py-0.5 rounded-full">
-          <span className="w-1 h-1 rounded-full bg-emerald-400" />
-          Active
-        </span>
-      </td>
-    </tr>
-  );
-}
 
 function StatCard({ label, value, note, accent }: { label: string; value: number; note?: string; accent?: boolean }) {
   return (
@@ -182,21 +143,3 @@ function PeriodTabs({ current }: { current: string }) {
   );
 }
 
-function SearchBar({ value, period }: { value: string; period: string }) {
-  return (
-    <form className="flex items-center gap-2">
-      <input type="hidden" name="period" value={period} />
-      <div className="relative">
-        <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6b8f7a]" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-        </svg>
-        <input
-          name="q"
-          defaultValue={value}
-          placeholder="Search domains…"
-          className="bg-[#080f0c] border border-[#1a2e22] rounded-lg pl-8 pr-3 py-1.5 text-xs font-mono text-white placeholder-[#3a5244] focus:outline-none focus:border-emerald-500 w-48"
-        />
-      </div>
-    </form>
-  );
-}
