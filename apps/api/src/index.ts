@@ -9,6 +9,7 @@ import { statsRouter } from './routes/stats.js';
 import { adminRouter } from './routes/admin.js';
 import { initQueue, flush } from './queues/index.js';
 import { runAggregation } from './jobs/aggregate.js';
+import { rotateDailySalt } from './jobs/rotateSalt.js';
 import { MAX_PAYLOAD_BYTES } from '@deep2k/shared';
 
 const env = loadEnv();
@@ -26,7 +27,7 @@ app.get('/health', (_req, res) => {
 app.use('/', ingestRouter(db));
 
 // Admin routes (bearer token)
-app.use('/api', adminAuth(env.ADMIN_TOKEN), sitesRouter(db));
+app.use('/api', adminAuth(env.ADMIN_TOKEN), sitesRouter(db, env));
 app.use('/api', adminAuth(env.ADMIN_TOKEN), statsRouter(db));
 app.use('/api', adminAuth(env.ADMIN_TOKEN), adminRouter(db));
 
@@ -41,6 +42,17 @@ const aggregationTask = cron.schedule('5 * * * *', async () => {
   }
 });
 
+// Daily salt rotation at midnight.
+const saltRotationTask = cron.schedule('0 0 * * *', async () => {
+  console.log('[cron] salt rotation starting');
+  try {
+    await rotateDailySalt(db);
+    console.log('[cron] salt rotation done');
+  } catch (err) {
+    console.error('[cron] salt rotation failed:', err);
+  }
+});
+
 const server = app.listen(env.API_PORT, () => {
   console.log(`[api] listening on http://localhost:${env.API_PORT}`);
 });
@@ -51,6 +63,7 @@ async function shutdown(signal: string): Promise<void> {
   shuttingDown = true;
   console.log(`[api] ${signal} received, draining`);
   aggregationTask.stop();
+  saltRotationTask.stop();
   await flush();
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(0), 5000).unref();

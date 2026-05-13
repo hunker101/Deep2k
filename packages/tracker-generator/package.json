@@ -15,7 +15,8 @@
     "lint": "echo \"no lint in @deep2k/tracker-generator\""
   },
   "dependencies": {
-    "@deep2k/shared": "workspace:*"
+    "@deep2k/shared": "workspace:*",
+    "javascript-obfuscator": "^5.4.2"
   },
   "devDependencies": {
     "vitest": "^2.1.5"

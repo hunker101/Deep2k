@@ -3,12 +3,20 @@ import { z } from 'zod';
 import { eq } from 'drizzle-orm';
 import { sites, type Db } from '@deep2k/db';
 import { generateScript, generateSiteConfig } from '@deep2k/tracker-generator';
+import type { Env } from '../env.js';
 
 const CreateSiteBody = z.object({
   domain: z.string().min(1).max(253),
 });
 
-export function sitesRouter(db: Db): Router {
+function pickBackendUrl(backendUrls: string | undefined): string | null {
+  if (!backendUrls) return null;
+  const pool = backendUrls.split(',').map(u => u.trim()).filter(Boolean);
+  if (pool.length === 0) return null;
+  return pool[Math.floor(Math.random() * pool.length)] ?? null;
+}
+
+export function sitesRouter(db: Db, env: Env): Router {
   const router = Router();
 
   router.get('/sites', async (_req: Request, res: Response) => {
@@ -35,7 +43,7 @@ export function sitesRouter(db: Db): Router {
           beaconMethod: cfg.beacon_method,
           initDelayMs: cfg.init_delay_ms,
           variableSeed: cfg.variable_seed,
-          backendUrl: null,
+          backendUrl: pickBackendUrl(env.BACKEND_URLS),
         })
         .returning();
       res.status(201).json(row);

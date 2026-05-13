@@ -13,7 +13,7 @@ async function main() {
     process.exit(1);
   }
 
-  const client = new pg.Client({ connectionString });
+  const client = new pg.Client({ connectionString, ssl: { rejectUnauthorized: false } });
   await client.connect();
 
   try {

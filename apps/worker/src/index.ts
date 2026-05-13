@@ -6,16 +6,22 @@ import {
 import { hashVisitor } from './hash.js';
 import { detectDevice } from './device.js';
 
+interface SaltKV {
+  get(key: string): Promise<string | null>;
+}
+
 interface Env {
   BACKEND_URL: string;
   DAILY_SALT: string;
   SITES_JSON: string;
+  SALT_KV?: SaltKV;
 }
 
 interface WorkerSite {
   id: string;
   secret: string;
   endpoint_path: string;
+  backend_url?: string;
 }
 
 // Transparent 1x1 GIF.
@@ -82,7 +88,8 @@ export default {
     const country =
       (req as Request & { cf?: { country?: string } }).cf?.country ?? '';
 
-    const visitor_id = await hashVisitor(ip, ua, env.DAILY_SALT, site.id);
+    const dailySalt = (env.SALT_KV ? await env.SALT_KV.get('current_salt') : null) ?? env.DAILY_SALT;
+    const visitor_id = await hashVisitor(ip, ua, dailySalt, site.id);
     const event: IngestEvent = {
       site_id: site.id,
       visitor_id,
@@ -93,17 +100,20 @@ export default {
       timestamp: data.t,
     };
 
+    const jitterMs = Math.random() * 500;
     ctx.waitUntil(
-      fetch(env.BACKEND_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Site-Auth': site.secret,
-        },
-        body: JSON.stringify(event),
-      }).catch(() => {
-        /* swallow — Phase 2: retry with backoff + dead-letter */
-      }),
+      new Promise<void>(resolve => setTimeout(resolve, jitterMs)).then(() =>
+        fetch(site.backend_url ?? env.BACKEND_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Site-Auth': site.secret,
+          },
+          body: JSON.stringify(event),
+        }).catch(() => {
+          /* swallow — Phase 2: retry with backoff + dead-letter */
+        }),
+      ),
     );
 
     if (req.method === 'GET') {

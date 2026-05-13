@@ -38,6 +38,17 @@ async function main() {
 
     if (!row) {
       console.log(`exists ${domain}`);
+      const { rows: [existing] } = await pool.query<{ id: string; secret: string; endpoint_path: string }>(
+        'SELECT id, secret, endpoint_path FROM sites WHERE domain = $1',
+        [domain],
+      );
+      if (existing) {
+        workerSites[domain] = {
+          id: existing.id,
+          secret: existing.secret,
+          endpoint_path: existing.endpoint_path,
+        };
+      }
       continue;
     }
     console.log(`created ${row.domain}  script=${row.scriptPath}  endpoint=${row.endpointPath}  beacon=${row.beaconMethod}`);

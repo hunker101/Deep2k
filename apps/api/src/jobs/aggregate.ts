@@ -1,16 +1,6 @@
 import type { Db } from '@deep2k/db';
 import { sql } from 'drizzle-orm';
 
-// Recomputes daily_stats for every (site, day) tuple that had any new event
-// arrive in the lookback window. Idempotent — re-running won't double-count.
-//
-// The 2-hour lookback covers the hourly cron plus late-arriving events; widen
-// it if your worker → backend latency is higher.
-//
-// Currently aggregates pageviews + unique_visitors (the columns the dashboard
-// displays). Countries/devices/top_paths JSONB rollups are TODO — they require
-// either multiple statements or LATERAL joins to avoid the ungrouped-column
-// trap, and the UI doesn't render them yet anyway.
 export async function runAggregation(db: Db, lookbackHours = 2): Promise<number> {
   const result = await db.execute(sql`
     WITH affected AS (
@@ -23,19 +13,69 @@ export async function runAggregation(db: Db, lookbackHours = 2): Promise<number>
         a.site_id,
         a.day,
         COUNT(*)::int                       AS pageviews,
-        COUNT(DISTINCT e.visitor_id)::int   AS unique_visitors
+        COUNT(DISTINCT e.visitor_id)::int   AS unique_visitors,
+
+        -- Top 10 paths by hit count
+        (
+          SELECT jsonb_object_agg(path, cnt)
+          FROM (
+            SELECT COALESCE(e2.path, '/') AS path, COUNT(*)::int AS cnt
+            FROM events e2
+            WHERE e2.site_id = a.site_id
+              AND date_trunc('day', e2.timestamp)::date = a.day
+              AND e2.path IS NOT NULL
+            GROUP BY e2.path
+            ORDER BY cnt DESC
+            LIMIT 10
+          ) t
+        ) AS top_paths,
+
+        -- Country visitor counts
+        (
+          SELECT jsonb_object_agg(country, cnt)
+          FROM (
+            SELECT COALESCE(e2.country, 'unknown') AS country, COUNT(DISTINCT e2.visitor_id)::int AS cnt
+            FROM events e2
+            WHERE e2.site_id = a.site_id
+              AND date_trunc('day', e2.timestamp)::date = a.day
+              AND e2.country IS NOT NULL AND e2.country <> ''
+            GROUP BY e2.country
+            ORDER BY cnt DESC
+            LIMIT 10
+          ) t
+        ) AS countries,
+
+        -- Device visitor counts
+        (
+          SELECT jsonb_object_agg(device, cnt)
+          FROM (
+            SELECT COALESCE(e2.device, 'unknown') AS device, COUNT(DISTINCT e2.visitor_id)::int AS cnt
+            FROM events e2
+            WHERE e2.site_id = a.site_id
+              AND date_trunc('day', e2.timestamp)::date = a.day
+            GROUP BY e2.device
+            ORDER BY cnt DESC
+          ) t
+        ) AS devices
+
       FROM affected a
       JOIN events e
         ON e.site_id = a.site_id
         AND date_trunc('day', e.timestamp)::date = a.day
       GROUP BY a.site_id, a.day
     )
-    INSERT INTO daily_stats (site_id, date, pageviews, unique_visitors)
-    SELECT site_id, day, pageviews, unique_visitors
+    INSERT INTO daily_stats (site_id, date, pageviews, unique_visitors, top_paths, countries, devices)
+    SELECT site_id, day, pageviews, unique_visitors,
+      COALESCE(top_paths, '{}'),
+      COALESCE(countries, '{}'),
+      COALESCE(devices, '{}')
     FROM rollup
     ON CONFLICT (site_id, date) DO UPDATE SET
       pageviews       = EXCLUDED.pageviews,
-      unique_visitors = EXCLUDED.unique_visitors
+      unique_visitors = EXCLUDED.unique_visitors,
+      top_paths       = EXCLUDED.top_paths,
+      countries       = EXCLUDED.countries,
+      devices         = EXCLUDED.devices
     RETURNING site_id;
   `);
   return result.rowCount ?? 0;
