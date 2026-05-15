@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { fetchSitesSummary, fetchOverview } from '@/lib/api';
 import { TrafficChart } from '@/components/TrafficChart';
 import { SitesTable } from '@/components/SitesTable';
+import { AddSiteButton } from '@/components/AddSiteButton';
 
 const PERIODS = [
   { key: 'today', label: 'Today' },
@@ -35,9 +36,7 @@ export default async function HomePage({
         </div>
         <span className="text-[#6b8f7a] text-sm font-mono hidden sm:block">{today}</span>
         <div className="flex items-center gap-2">
-          <span className="bg-emerald-400/10 text-emerald-400 border border-emerald-400/20 text-sm font-semibold px-4 py-1.5 rounded-lg cursor-not-allowed select-none">
-            + Add site
-          </span>
+          <AddSiteButton />
           <a href="/api/logout" className="text-[#6b8f7a] hover:text-white text-xs font-mono px-2 py-1.5 transition-colors">
             Sign out
           </a>

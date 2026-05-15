@@ -6,7 +6,7 @@ import {
 import { hashVisitor } from './hash.js';
 import { detectDevice } from './device.js';
 
-interface SaltKV {
+interface KVNamespace {
   get(key: string): Promise<string | null>;
 }
 
@@ -14,7 +14,8 @@ interface Env {
   BACKEND_URL: string;
   DAILY_SALT: string;
   SITES_JSON: string;
-  SALT_KV?: SaltKV;
+  SALT_KV?: KVNamespace;
+  SITES_KV?: KVNamespace;
 }
 
 interface WorkerSite {
@@ -37,24 +38,30 @@ export default {
     const hostHeader = req.headers.get('host') ?? '';
     const host = hostHeader.toLowerCase().split(':')[0] ?? '';
 
-    let sites: Record<string, WorkerSite>;
-    try {
-      sites = JSON.parse(env.SITES_JSON) as Record<string, WorkerSite>;
-    } catch {
-      return new Response('config error', { status: 500 });
+    // Look up site config: KV first (live), fall back to SITES_JSON (static).
+    // KV key format: "hostname:pathname" — allows multiple stores on same workers.dev host.
+    let site: WorkerSite | null = null;
+    if (env.SITES_KV) {
+      const kvVal = await env.SITES_KV.get(`${host}:${url.pathname}`);
+      if (kvVal) {
+        try { site = JSON.parse(kvVal) as WorkerSite; } catch { /* ignore */ }
+      }
     }
-
-    const site = sites[host];
     if (!site) {
-      // Unknown host — drop and 404. Never auto-create.
+      try {
+        const sites = JSON.parse(env.SITES_JSON) as Record<string, WorkerSite>;
+        const s = sites[host];
+        if (s && url.pathname === s.endpoint_path) site = s;
+      } catch {
+        return new Response('config error', { status: 500 });
+      }
+    }
+    if (!site) {
       return new Response('not found', { status: 404 });
     }
 
-    if (url.pathname !== site.endpoint_path) {
-      // TODO Phase 2: also match site.script_path here to serve the tracker JS
-      // (requires either preloading the script into KV or origin-fetching+caching).
-      return new Response('not found', { status: 404 });
-    }
+    // Path already matched during KV lookup (hostname:pathname key).
+    // For SITES_JSON fallback, path was also validated above.
 
     if (req.method !== 'POST' && req.method !== 'GET') {
       return new Response('method not allowed', { status: 405 });

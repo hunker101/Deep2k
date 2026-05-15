@@ -94,7 +94,7 @@ export function statsRouter(db: Db): Router {
         ${q.data.from ? sql`AND ds.date >= ${q.data.from}` : sql``}
         ${q.data.to ? sql`AND ds.date <= ${q.data.to}` : sql``}
       GROUP BY s.id
-      ORDER BY "totalPageviews" DESC
+      ORDER BY s.created_at DESC
     `);
 
     res.json(result.rows);
