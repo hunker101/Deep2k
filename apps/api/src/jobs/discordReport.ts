@@ -40,7 +40,7 @@ export async function sendDiscordReport(db: Db): Promise<void> {
     WHERE ds.date = ${date}
     ORDER BY ds.unique_visitors DESC
   `);
-  const sites = sitesResult.rows as SiteReport[];
+  const sites = sitesResult.rows as unknown as SiteReport[];
 
   // Top countries across all sites
   const countriesResult = await db.execute(sql`
@@ -51,7 +51,7 @@ export async function sendDiscordReport(db: Db): Promise<void> {
     ORDER BY cnt DESC
     LIMIT 5
   `);
-  const countries = countriesResult.rows as CountryRow[];
+  const countries = countriesResult.rows as unknown as CountryRow[];
 
   // Device breakdown
   const devicesResult = await db.execute(sql`
@@ -61,7 +61,7 @@ export async function sendDiscordReport(db: Db): Promise<void> {
     GROUP BY key
     ORDER BY cnt DESC
   `);
-  const devices = devicesResult.rows as DeviceRow[];
+  const devices = devicesResult.rows as unknown as DeviceRow[];
   const totalDevices = devices.reduce((s, d) => s + Number(d.cnt), 0);
 
   // Format date nicely
