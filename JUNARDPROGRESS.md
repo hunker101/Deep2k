@@ -1,6 +1,6 @@
 # Deep2k — Junard Session Progress
 
-**Last updated:** 2026-05-17
+**Last updated:** 2026-05-17 (session 2)
 **Session contributor:** Junard (hunker101)
 **Status legend:** ✅ done · 🟡 partial · ❌ not started
 
@@ -186,14 +186,10 @@ Same commands work on production — replace `localhost:3000` with `https://deep
 
 ---
 
-### Phase 2 — Shopify Injection (not started)
-- Get tracker script from `GET /api/sites/:id/script` on Render
-- Inject inline into Shopify `theme.liquid` (recommended — hides origin, no external load)
-- Real events will flow: Shopify → CF Worker → Render API → DB → Dashboard
-- Dashboard AddSiteModal already outputs the script — just needs copy-paste into theme
-
-### Phase 2b — WordPress Injection (not started)
-- Same approach — inline script into `functions.php` or a micro-plugin via `wp_head()`
+### Phase 2 — Shopify / WordPress Injection ✅
+- Injected tracker into 8 real stores via `theme.liquid` inline script
+- Real traffic flowing: Store → CF Worker → Render API → DB → Dashboard
+- Verified pipeline end-to-end with live store visits
 
 ### Phase 3 — Production Hardening (partial ✅)
 
@@ -205,10 +201,28 @@ Same commands work on production — replace `localhost:3000` with `https://deep
 | Attach real domain to Worker | ❌ | Need CF Worker route on each store's zone (store DNS through Cloudflare, route `store.com/<endpoint_path>` → Worker). Required for true first-party beacons. |
 | Monthly partition management | ❌ | Partitions currently only go through July 2026. Need monthly cron or manual run of `infra/scripts/create-partitions.ts` before each new month. |
 
-### Phase 4 — Monitoring (not started)
-- Cron job checking `MAX(received_at)` per site — alert when >24h since last event
-- Dashboard staleness badge (time-based, not period-relative)
-- Worker error rate tracking (currently all backend errors are swallowed silently)
+### Phase 4 — Monitoring (partial ✅)
+
+| Item | Status | Notes |
+|---|---|---|
+| Staleness badge | ✅ | Sites table + site detail show Active / Stale (yellow) / Inactive based on `lastEvent` timestamp. `lastEvent` added to `sites-summary` query via subquery on `events` table |
+| Worker error tracking | ✅ | Worker now retries once after 1s before giving up. Failed retries log `console.error` visible in CF Workers logs dashboard |
+| Discord daily report | ❌ | Waiting for webhook URL from Jerome. Cron at 8am UTC. Content: total visitors/pageviews, top sites, lowest sites, top countries, device breakdown |
+
+### New Cloudflare Account (vantatech)
+- Account ID: `508c7aa5575ae34a361bcb95a47961c9`
+- Worker URL: `https://deep2k-worker.vantatech.workers.dev`
+- DEEP2K_SALTS KV: `817ae773882f4c43b3018065ccea09a7`
+- DEEP2K_SITES KV: `8e1b9b0fbe9d4b379436cc3bd6b61bfb`
+- All 7 sites synced to new SITES_KV via `pnpm --filter @deep2k/infra run sync:kv`
+- All Render env vars updated to new account
+
+### New Files (this session)
+| File | Purpose |
+|---|---|
+| `apps/dashboard/src/components/GetScriptModal.tsx` | "Get script" button + modal on site detail page |
+| `apps/dashboard/src/app/api/sites/[id]/script/route.ts` | Proxy route — fetches tracker script from API with auth |
+| `infra/scripts/sync-sites-kv.ts` | One-off script — pushes all DB sites to new SITES_KV |
 
 ---
 

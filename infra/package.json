@@ -6,6 +6,7 @@
   "scripts": {
     "seed:pilot": "tsx --env-file=../.env scripts/seed-pilot.ts",
     "partitions:create": "tsx --env-file=../.env scripts/create-partitions.ts",
+    "sync:kv": "tsx --env-file=../.env scripts/sync-sites-kv.ts",
     "build": "echo \"no build in @deep2k/infra\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "echo \"no tests in @deep2k/infra\"",

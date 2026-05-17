@@ -15,6 +15,7 @@ export interface SiteSummaryRow extends SiteRow {
   topPage: string | null;
   topCountry: string | null;
   topDevice: string | null;
+  lastEvent: string | null;
 }
 
 export interface DailyStatRow {

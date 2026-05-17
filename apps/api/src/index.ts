@@ -10,6 +10,7 @@ import { adminRouter } from './routes/admin.js';
 import { initQueue, flush } from './queues/index.js';
 import { runAggregation } from './jobs/aggregate.js';
 import { rotateDailySalt } from './jobs/rotateSalt.js';
+import { sendDiscordReport } from './jobs/discordReport.js';
 import { MAX_PAYLOAD_BYTES } from '@deep2k/shared';
 
 const env = loadEnv();
@@ -42,6 +43,16 @@ const aggregationTask = cron.schedule('5 * * * *', async () => {
   }
 });
 
+// Daily Discord report at 8am UTC.
+const discordReportTask = cron.schedule('0 8 * * *', async () => {
+  console.log('[cron] discord report starting');
+  try {
+    await sendDiscordReport(db);
+  } catch (err) {
+    console.error('[cron] discord report failed:', err);
+  }
+});
+
 // Daily salt rotation at midnight.
 const saltRotationTask = cron.schedule('0 0 * * *', async () => {
   console.log('[cron] salt rotation starting');
@@ -64,6 +75,7 @@ async function shutdown(signal: string): Promise<void> {
   console.log(`[api] ${signal} received, draining`);
   aggregationTask.stop();
   saltRotationTask.stop();
+  discordReportTask.stop();
   await flush();
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(0), 5000).unref();

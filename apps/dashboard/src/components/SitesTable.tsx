@@ -54,6 +54,37 @@ function DeviceIcon({ device }: { device: string | null }) {
   );
 }
 
+function isStale(lastEvent: string | null): boolean {
+  if (!lastEvent) return true;
+  return Date.now() - new Date(lastEvent).getTime() > 24 * 60 * 60 * 1000;
+}
+
+function StatusBadge({ pageviews, lastEvent }: { pageviews: number; lastEvent: string | null }) {
+  const stale = isStale(lastEvent);
+  if (pageviews > 0 && !stale) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-full border bg-emerald-400/10 text-emerald-400 border-emerald-400/20">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+        Active
+      </span>
+    );
+  }
+  if (pageviews > 0 && stale) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-full border bg-yellow-400/10 text-yellow-400 border-yellow-400/20" title="No events received in the last 24h">
+        <span className="w-1.5 h-1.5 rounded-full bg-yellow-400" />
+        Stale
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-full border bg-[#1a2e22] text-[#4a7060] border-[#1a2e22]">
+      <span className="w-1.5 h-1.5 rounded-full bg-[#4a7060]" />
+      Inactive
+    </span>
+  );
+}
+
 function CountryBadge({ country }: { country: string | null }) {
   if (!country) return <span className="text-[#4a7060]">—</span>;
   const code = country.slice(0, 2).toUpperCase();
@@ -231,14 +262,7 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
                   <td className="px-5 py-3.5"><CountryBadge country={s.topCountry} /></td>
                   <td className="px-5 py-3.5"><DeviceIcon device={s.topDevice} /></td>
                   <td className="px-5 py-3.5">
-                    <span className={`inline-flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-full border ${
-                      s.totalPageviews > 0
-                        ? 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20'
-                        : 'bg-[#1a2e22] text-[#4a7060] border-[#1a2e22]'
-                    }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${s.totalPageviews > 0 ? 'bg-emerald-400' : 'bg-[#4a7060]'}`} />
-                      {s.totalPageviews > 0 ? 'Active' : 'Inactive'}
-                    </span>
+                    <StatusBadge pageviews={s.totalPageviews} lastEvent={s.lastEvent} />
                   </td>
                   <td className="px-3 py-3.5 sticky right-0 bg-[#0d1a14] group-hover:bg-[#0f2018] transition-colors" onClick={e => e.stopPropagation()}>
                     <button

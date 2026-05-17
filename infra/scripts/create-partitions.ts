@@ -43,7 +43,7 @@ async function main(): Promise<void> {
     process.exit(1);
   }
   const { months } = parseArgs();
-  const client = new pg.Client({ connectionString: url });
+  const client = new pg.Client({ connectionString: url, ssl: { rejectUnauthorized: false } });
   await client.connect();
 
   try {

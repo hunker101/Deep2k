@@ -1,15 +1,15 @@
 name = "deep2k-worker"
 main = "src/index.ts"
 compatibility_date = "2024-11-06"
-account_id = "33e03180d7a0d6a1837153c26f3435b2"
+account_id = "508c7aa5575ae34a361bcb95a47961c9"
 
 [[kv_namespaces]]
 binding = "SALT_KV"
-id = "b7f4051ce32e418093520e7a18f90c35"
+id = "817ae773882f4c43b3018065ccea09a7"
 
 [[kv_namespaces]]
 binding = "SITES_KV"
-id = "6d6717b1c52540838b658422354c923e"
+id = "8e1b9b0fbe9d4b379436cc3bd6b61bfb"
 
 # Dev-only vars. In prod these come from the dashboard runtime config + KV.
 [vars]

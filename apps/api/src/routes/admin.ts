@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import type { Db } from '@deep2k/db';
 import { runAggregation } from '../jobs/aggregate.js';
 import { flush } from '../queues/index.js';
+import { sendDiscordReport } from '../jobs/discordReport.js';
 
 export function adminRouter(db: Db): Router {
   const router = Router();
@@ -23,6 +24,15 @@ export function adminRouter(db: Db): Router {
     try {
       const rows = await runAggregation(db);
       res.json({ ok: true, rows_upserted: rows });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: String(err) });
+    }
+  });
+
+  router.post('/admin/discord-report', async (_req: Request, res: Response) => {
+    try {
+      await sendDiscordReport(db);
+      res.json({ ok: true });
     } catch (err) {
       res.status(500).json({ ok: false, error: String(err) });
     }

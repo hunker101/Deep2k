@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { fetchSiteStats, fetchLastEvent, fetchSites } from '@/lib/api';
 import { TrafficChart } from '@/components/TrafficChart';
 import { CopyButton } from '@/components/CopyButton';
+import { GetScriptButton } from '@/components/GetScriptModal';
 import type { DailyStatRow, SiteRow } from '@/lib/api';
 
 const PERIODS = [
@@ -93,15 +94,24 @@ export default async function SitePage({
             <p className="text-xs font-mono text-[#6b8f7a] mb-1">SITES / {site?.domain.toUpperCase() ?? id.toUpperCase()}</p>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold">{site?.domain ?? id}</h1>
-              {totalPageviews > 0 ? (
-                <span className="inline-flex items-center gap-1.5 bg-emerald-400/10 text-emerald-400 border border-emerald-400/20 text-xs font-mono px-2 py-0.5 rounded-full">
-                  <span className="w-1 h-1 rounded-full bg-emerald-400"/>Active
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 bg-[#1a2e22] text-[#4a7060] border border-[#1a2e22] text-xs font-mono px-2 py-0.5 rounded-full">
-                  <span className="w-1 h-1 rounded-full bg-[#4a7060]"/>Inactive
-                </span>
-              )}
+              {(() => {
+                const stale = !lastEvent || Date.now() - new Date(lastEvent).getTime() > 24 * 60 * 60 * 1000;
+                if (totalPageviews > 0 && !stale) return (
+                  <span className="inline-flex items-center gap-1.5 bg-emerald-400/10 text-emerald-400 border border-emerald-400/20 text-xs font-mono px-2 py-0.5 rounded-full">
+                    <span className="w-1 h-1 rounded-full bg-emerald-400"/>Active
+                  </span>
+                );
+                if (totalPageviews > 0 && stale) return (
+                  <span className="inline-flex items-center gap-1.5 bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 text-xs font-mono px-2 py-0.5 rounded-full" title="No events received in the last 24h">
+                    <span className="w-1 h-1 rounded-full bg-yellow-400"/>Stale
+                  </span>
+                );
+                return (
+                  <span className="inline-flex items-center gap-1.5 bg-[#1a2e22] text-[#4a7060] border border-[#1a2e22] text-xs font-mono px-2 py-0.5 rounded-full">
+                    <span className="w-1 h-1 rounded-full bg-[#4a7060]"/>Inactive
+                  </span>
+                );
+              })()}
             </div>
             <p className="text-xs font-mono text-[#6b8f7a] mt-1 flex items-center gap-2 flex-wrap">
               <span>Last event {lastEventLabel}</span>
@@ -216,6 +226,7 @@ export default async function SitePage({
               <h3 className="text-sm font-semibold">Beacon &amp; worker</h3>
               <p className="text-xs text-[#6b8f7a] font-mono mt-0.5">Deployed configuration for this property</p>
             </div>
+            {site && <GetScriptButton siteId={site.id} />}
           </div>
           {site ? (
             <div className="divide-y divide-[#1a2e22]">

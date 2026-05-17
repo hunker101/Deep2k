@@ -117,9 +117,21 @@ export default {
             'X-Site-Auth': site.secret,
           },
           body: JSON.stringify(event),
-        }).catch(() => {
-          /* swallow — Phase 2: retry with backoff + dead-letter */
-        }),
+        }).catch(() =>
+          // Retry once after 1s before giving up
+          new Promise<void>(resolve => setTimeout(resolve, 1000)).then(() =>
+            fetch(site.backend_url ?? env.BACKEND_URL, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Site-Auth': site.secret,
+              },
+              body: JSON.stringify(event),
+            }).catch(err => {
+              console.error(`[worker] failed to forward event for site ${site.id} after retry:`, err);
+            })
+          )
+        ),
       ),
     );
 

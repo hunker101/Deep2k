@@ -79,7 +79,7 @@ export function statsRouter(db: Db): Router {
     const q = RangeQuery.safeParse(req.query);
     if (!q.success) { res.status(400).json({ error: 'invalid query' }); return; }
 
-    // Step 1: fast base query — sites + totals
+    // Step 1: fast base query — sites + totals + last event timestamp
     const baseResult = await db.execute(sql`
       SELECT
         s.id,
@@ -89,7 +89,8 @@ export function statsRouter(db: Db): Router {
         s.beacon_method AS "beaconMethod",
         s.created_at    AS "createdAt",
         COALESCE(SUM(ds.pageviews), 0)::int       AS "totalPageviews",
-        COALESCE(SUM(ds.unique_visitors), 0)::int AS "totalVisitors"
+        COALESCE(SUM(ds.unique_visitors), 0)::int AS "totalVisitors",
+        (SELECT MAX(e.received_at) FROM events e WHERE e.site_id = s.id) AS "lastEvent"
       FROM sites s
       LEFT JOIN daily_stats ds ON ds.site_id = s.id
         ${q.data.from ? sql`AND ds.date >= ${q.data.from}` : sql``}

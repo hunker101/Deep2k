@@ -14,6 +14,7 @@ const EnvSchema = z.object({
   // Base URL of the deployed Worker (e.g. https://deep2k-worker.xxx.workers.dev).
   // When set, tracker scripts use an absolute endpoint URL instead of relative.
   CF_WORKER_URL: z.string().optional(),
+  DISCORD_WEBHOOK_URL: z.string().optional(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
