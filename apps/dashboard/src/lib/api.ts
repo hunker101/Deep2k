@@ -12,6 +12,9 @@ export interface SiteRow {
 export interface SiteSummaryRow extends SiteRow {
   totalPageviews: number;
   totalVisitors: number;
+  topPage: string | null;
+  topCountry: string | null;
+  topDevice: string | null;
 }
 
 export interface DailyStatRow {

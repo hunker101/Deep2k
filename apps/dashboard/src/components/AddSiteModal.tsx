@@ -13,15 +13,22 @@ interface CreatedSite {
 
 export function AddSiteModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [domain, setDomain] = useState('');
+  const [confirming, setConfirming] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [created, setCreated] = useState<CreatedSite | null>(null);
   const [copied, setCopied] = useState(false);
 
-  async function handleCreate(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    setConfirming(true);
+  }
+
+  async function handleConfirm() {
+    setError('');
     setLoading(true);
+    setConfirming(false);
     try {
       const res = await fetch('/api/sites', {
         method: 'POST',
@@ -67,9 +74,9 @@ export function AddSiteModal({ onClose, onCreated }: { onClose: () => void; onCr
         </div>
 
         <div className="px-6 py-5">
-          {!created ? (
+          {!created && !confirming && (
             /* Step 1 — Enter domain */
-            <form onSubmit={handleCreate} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-mono text-[#6b8f7a] mb-2">Store domain</label>
                 <input
@@ -98,15 +105,50 @@ export function AddSiteModal({ onClose, onCreated }: { onClose: () => void; onCr
                 </button>
               </div>
             </form>
-          ) : (
-            /* Step 2 — Show script + instructions */
+          )}
+
+          {/* Confirmation step */}
+          {confirming && !created && (
+            <div className="space-y-5">
+              <div className="bg-[#080f0c] border border-[#1a2e22] rounded-xl p-5">
+                <p className="text-xs font-mono text-[#6b8f7a] mb-1">You are about to create a tracker for:</p>
+                <p className="text-emerald-400 font-mono text-lg font-semibold">{domain.trim().replace(/^https?:\/\//, '')}</p>
+              </div>
+
+              <div className="bg-yellow-400/5 border border-yellow-400/20 rounded-xl px-4 py-3">
+                <p className="text-yellow-400 text-xs font-mono">
+                  Make sure this is the correct public domain. A unique obfuscated tracker script will be generated and pushed to Cloudflare KV.
+                </p>
+              </div>
+
+              {error && <p className="text-red-400 text-xs font-mono">{error}</p>}
+
+              <div className="flex items-center gap-3 pt-1">
+                <button
+                  onClick={handleConfirm}
+                  disabled={loading}
+                  className="bg-emerald-400 hover:bg-emerald-300 disabled:opacity-40 disabled:cursor-not-allowed text-black font-semibold px-6 py-2.5 rounded-lg text-sm transition-colors"
+                >
+                  {loading ? 'Creating…' : 'Yes, create site'}
+                </button>
+                <button
+                  onClick={() => setConfirming(false)}
+                  className="text-[#6b8f7a] hover:text-white text-sm font-mono transition-colors"
+                >
+                  Go back
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Result — Show script + instructions */}
+          {created && (
             <div className="space-y-6">
               <div className="flex items-center gap-2 bg-emerald-400/10 border border-emerald-400/20 rounded-lg px-4 py-3">
                 <span className="w-2 h-2 rounded-full bg-emerald-400" />
                 <span className="text-emerald-400 text-sm font-mono">Site created — <strong>{created.domain}</strong></span>
               </div>
 
-              {/* Step 1 */}
               <div>
                 <h3 className="text-white text-sm font-semibold mb-2 flex items-center gap-2">
                   <span className="w-5 h-5 rounded-full bg-emerald-400/20 text-emerald-400 text-xs flex items-center justify-center font-bold">1</span>
@@ -125,7 +167,6 @@ export function AddSiteModal({ onClose, onCreated }: { onClose: () => void; onCr
                 </div>
               </div>
 
-              {/* Step 2 */}
               <div>
                 <h3 className="text-white text-sm font-semibold mb-3 flex items-center gap-2">
                   <span className="w-5 h-5 rounded-full bg-emerald-400/20 text-emerald-400 text-xs flex items-center justify-center font-bold">2</span>
@@ -142,14 +183,13 @@ export function AddSiteModal({ onClose, onCreated }: { onClose: () => void; onCr
                 </div>
               </div>
 
-              {/* Step 3 */}
               <div className="bg-[#0a1a10] border border-[#1a2e22] rounded-lg px-4 py-3">
                 <h3 className="text-white text-sm font-semibold mb-1 flex items-center gap-2">
                   <span className="w-5 h-5 rounded-full bg-emerald-400/20 text-emerald-400 text-xs flex items-center justify-center font-bold">3</span>
                   Visit the store + check dashboard
                 </h3>
                 <p className="text-xs font-mono text-[#6b8f7a]">
-                  After injecting, visit the store in your browser. Events appear in the dashboard after the next aggregation (runs hourly, or trigger manually).
+                  After injecting, visit the store in your browser. Events appear after the next aggregation (runs hourly, or trigger manually).
                 </p>
               </div>
 

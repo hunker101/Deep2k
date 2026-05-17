@@ -78,7 +78,7 @@ export function sitesRouter(db: Db, env: Env): Router {
     const id = req.params.id ?? '';
     const [row] = await db.delete(sites).where(eq(sites.id, id)).returning();
     if (!row) { res.status(404).end(); return; }
-    await deleteSiteFromKV(row.domain).catch((err: unknown) => console.error('[cf-kv] delete failed:', err));
+    await deleteSiteFromKV(row.domain, row.endpointPath).catch((err: unknown) => console.error('[cf-kv] delete failed:', err));
     res.status(204).end();
   });
 

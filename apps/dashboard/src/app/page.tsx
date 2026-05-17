@@ -2,8 +2,7 @@ import Link from 'next/link';
 import { fetchSitesSummary, fetchOverview } from '@/lib/api';
 import { TrafficChart } from '@/components/TrafficChart';
 import { SitesTable } from '@/components/SitesTable';
-import { AddSiteButton } from '@/components/AddSiteButton';
-import { BulkUploadButton } from '@/components/BulkUploadButton';
+import { FloatingActions } from '@/components/FloatingActions';
 
 const PERIODS = [
   { key: 'today', label: 'Today' },
@@ -28,24 +27,35 @@ export default async function HomePage({
   return (
     <div className="min-h-screen bg-[#080f0c]">
       {/* Top nav */}
-      <header className="border-b border-[#1a2e22] px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      <header className="border-b border-[#1a2e22] px-6 py-3 flex items-center justify-between bg-[#080f0c]/80 backdrop-blur-sm sticky top-0 z-30">
+        {/* Logo */}
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 bg-emerald-400/10 border border-emerald-400/20 rounded-lg flex items-center justify-center">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+          </div>
+          <span className="text-white font-bold tracking-tight">Deep<span className="text-emerald-400">2K</span></span>
+        </div>
+
+        {/* Date */}
+        <span className="text-[#4a7060] text-xs font-mono hidden sm:block">{today}</span>
+
+        {/* Sign out */}
+        <a
+          href="/api/logout"
+          className="flex items-center gap-1.5 text-[#6b8f7a] hover:text-red-400 border border-transparent hover:border-red-400/20 hover:bg-red-400/5 text-xs font-mono px-3 py-1.5 rounded-lg transition-all"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
           </svg>
-          <span className="text-white font-semibold">Deep<span className="text-emerald-400">2K</span></span>
-        </div>
-        <span className="text-[#6b8f7a] text-sm font-mono hidden sm:block">{today}</span>
-        <div className="flex items-center gap-2">
-          <BulkUploadButton />
-          <AddSiteButton />
-          <a href="/api/logout" className="text-[#6b8f7a] hover:text-white text-xs font-mono px-2 py-1.5 transition-colors">
-            Sign out
-          </a>
-        </div>
+          Sign out
+        </a>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+      <main className="max-w-7xl mx-auto px-6 py-8 pb-28 space-y-6">
         {/* Page title + filters */}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -69,28 +79,14 @@ export default async function HomePage({
         {/* Combined chart */}
         <div className="bg-[#0d1a14] border border-[#1a2e22] rounded-xl overflow-hidden">
           {/* Chart header */}
-          <div className="px-5 pt-5 pb-4 flex flex-wrap items-start justify-between gap-4 border-b border-[#1a2e22]">
-            <div>
-              <h2 className="text-sm font-semibold text-white">Traffic — all sites combined</h2>
-              <p className="text-xs text-[#4a7060] font-mono mt-0.5">
-                Daily totals · {period === '7d' ? '7 days' : period === '30d' ? '30 days' : period === 'month' ? 'this month' : 'today'}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 bg-[#0a1a10] border border-[#1a2e22] rounded-lg px-3 py-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]" />
-                <span className="text-xs text-[#6b8f7a] font-mono">Visitors</span>
-                <span className="text-sm font-bold text-white font-mono tabular-nums">{overview.totalVisitors.toLocaleString()}</span>
-              </div>
-              <div className="flex items-center gap-2 bg-[#0a1a10] border border-[#1a2e22] rounded-lg px-3 py-2">
-                <span className="w-2 h-2 rounded-full bg-sky-400 shadow-[0_0_6px_#38bdf8]" />
-                <span className="text-xs text-[#6b8f7a] font-mono">Pageviews</span>
-                <span className="text-sm font-bold text-white font-mono tabular-nums">{overview.totalPageviews.toLocaleString()}</span>
-              </div>
-            </div>
+          <div className="px-5 pt-5 pb-4 border-b border-[#1a2e22]">
+            <h2 className="text-sm font-semibold text-white">Traffic — all sites combined</h2>
+            <p className="text-xs text-[#4a7060] font-mono mt-0.5">
+              Daily totals · {period === '7d' ? '7 days' : period === '30d' ? '30 days' : period === 'month' ? 'this month' : 'today'}
+            </p>
           </div>
           {/* Chart body */}
-          <div className="px-3 pt-4 pb-2">
+          <div className="px-5 pt-4 pb-3 space-y-3">
             {overview.daily.length === 0 ? (
               <div className="h-48 flex flex-col items-center justify-center gap-2 text-[#4a7060]">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -99,7 +95,11 @@ export default async function HomePage({
                 <span className="text-sm font-mono">No data yet — inject events then run aggregation</span>
               </div>
             ) : (
-              <TrafficChart data={overview.daily} />
+              <TrafficChart
+                data={overview.daily}
+                totalVisitors={overview.totalVisitors}
+                totalPageviews={overview.totalPageviews}
+              />
             )}
           </div>
         </div>
@@ -107,6 +107,9 @@ export default async function HomePage({
         {/* Sites table */}
         <SitesTable sites={sites} />
       </main>
+
+      {/* Floating action button */}
+      <FloatingActions />
     </div>
   );
 }

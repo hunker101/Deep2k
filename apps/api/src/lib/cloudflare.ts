@@ -57,13 +57,31 @@ export async function pushSiteToKV(domain: string, config: WorkerSiteConfig): Pr
   console.log(`[cf-kv] pushed site config for ${domain} to SITES_KV`);
 }
 
-export async function deleteSiteFromKV(domain: string): Promise<void> {
+export async function deleteSiteFromKV(domain: string, endpointPath: string): Promise<void> {
   const creds = getCreds();
   if (!creds) return;
 
-  const url = `https://api.cloudflare.com/client/v4/accounts/${creds.accountId}/storage/kv/namespaces/${creds.sitesKvNamespaceId}/values/${encodeURIComponent(domain)}`;
-  await fetch(url, {
-    method: 'DELETE',
-    headers: { Authorization: `Bearer ${creds.apiToken}` },
-  });
+  const pathname = endpointPath.startsWith('http')
+    ? new URL(endpointPath).pathname
+    : endpointPath;
+
+  const keysToDelete = [`${domain}:${pathname}`];
+
+  const workerUrl = process.env.CF_WORKER_URL;
+  if (workerUrl) {
+    const workerHost = new URL(workerUrl).hostname;
+    if (workerHost !== domain) {
+      keysToDelete.push(`${workerHost}:${pathname}`);
+    }
+  }
+
+  await Promise.all(keysToDelete.map(key => {
+    const url = `https://api.cloudflare.com/client/v4/accounts/${creds.accountId}/storage/kv/namespaces/${creds.sitesKvNamespaceId}/values/${encodeURIComponent(key)}`;
+    return fetch(url, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${creds.apiToken}` },
+    });
+  }));
+
+  console.log(`[cf-kv] deleted site config for ${domain} from SITES_KV`);
 }

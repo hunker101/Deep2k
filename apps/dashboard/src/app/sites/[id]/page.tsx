@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { fetchSiteStats, fetchLastEvent, fetchSites } from '@/lib/api';
 import { TrafficChart } from '@/components/TrafficChart';
+import { CopyButton } from '@/components/CopyButton';
 import type { DailyStatRow, SiteRow } from '@/lib/api';
 
 const PERIODS = [
@@ -92,13 +93,36 @@ export default async function SitePage({
             <p className="text-xs font-mono text-[#6b8f7a] mb-1">SITES / {site?.domain.toUpperCase() ?? id.toUpperCase()}</p>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold">{site?.domain ?? id}</h1>
-              <span className="inline-flex items-center gap-1.5 bg-emerald-400/10 text-emerald-400 border border-emerald-400/20 text-xs font-mono px-2 py-0.5 rounded-full">
-                <span className="w-1 h-1 rounded-full bg-emerald-400"/>Active
-              </span>
+              {totalPageviews > 0 ? (
+                <span className="inline-flex items-center gap-1.5 bg-emerald-400/10 text-emerald-400 border border-emerald-400/20 text-xs font-mono px-2 py-0.5 rounded-full">
+                  <span className="w-1 h-1 rounded-full bg-emerald-400"/>Active
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 bg-[#1a2e22] text-[#4a7060] border border-[#1a2e22] text-xs font-mono px-2 py-0.5 rounded-full">
+                  <span className="w-1 h-1 rounded-full bg-[#4a7060]"/>Inactive
+                </span>
+              )}
             </div>
-            <p className="text-xs font-mono text-[#6b8f7a] mt-1">
-              Last event {lastEventLabel}
-              {site && <> · <span className="text-[#6b8f7a]">beacon: {site.beaconMethod}</span></>}
+            <p className="text-xs font-mono text-[#6b8f7a] mt-1 flex items-center gap-2 flex-wrap">
+              <span>Last event {lastEventLabel}</span>
+              {site && <><span>·</span><span>beacon: {site.beaconMethod}</span></>}
+              {site && (
+                <>
+                  <span>·</span>
+                  <a
+                    href={`https://${site.domain}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1"
+                  >
+                    Open store
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                      <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                    </svg>
+                  </a>
+                </>
+              )}
             </p>
           </div>
           <PeriodTabs current={period} id={id} />
@@ -127,21 +151,17 @@ export default async function SitePage({
               <h2 className="text-sm font-semibold">Visitors &amp; pageviews</h2>
               <p className="text-xs text-[#6b8f7a] font-mono mt-0.5">Daily totals · {period === '7d' ? '7 days' : period === '30d' ? '30 days' : period}</p>
             </div>
-            <div className="flex items-center gap-4 text-xs font-mono">
-              <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-emerald-400 inline-block rounded"/>Visitors</span>
-              <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-sky-400 inline-block rounded"/>Pageviews</span>
-            </div>
           </div>
           {chartData.length === 0 ? (
             <div className="h-40 flex items-center justify-center text-[#6b8f7a] text-sm font-mono">No data for this period</div>
           ) : (
-            <TrafficChart data={chartData} />
+            <TrafficChart data={chartData} totalVisitors={totalVisitors} totalPageviews={totalPageviews} />
           )}
         </div>
 
         {/* Top pages / Top countries / Device breakdown */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <Panel title="Top pages" count={topPages.length} total={totalPageviews}>
+          <Panel title="Top pages" count={topPages.length}>
             {topPages.length === 0 ? <EmptyPanel /> : topPages.map(([path, count]) => (
               <RankRow key={path} label={path} count={count} total={totalPageviews} />
             ))}
@@ -149,7 +169,7 @@ export default async function SitePage({
 
           <Panel title="Top countries" count={topCountries.length}>
             {topCountries.length === 0 ? <EmptyPanel /> : topCountries.map(([country, count]) => (
-              <RankRow key={country} label={country} count={count} total={totalVisitors} />
+              <CountryRankRow key={country} country={country} count={count} total={totalVisitors} />
             ))}
           </Panel>
 
@@ -175,8 +195,8 @@ export default async function SitePage({
                   <div className="space-y-2">
                     {deviceList.map(([d, v]) => (
                       <div key={d} className="flex items-center justify-between text-xs font-mono">
-                        <span className="flex items-center gap-2">
-                          <span className={`w-2 h-2 rounded-sm ${deviceColor(d)}`} />
+                        <span className={`flex items-center gap-2 ${deviceColor(d).replace('bg-', 'text-')}`}>
+                          <DeviceIcon device={d} />
                           <span className="text-white">{cap(d)}</span>
                         </span>
                         <span className="text-[#6b8f7a]">{Math.round((v / totalDevices) * 100)}%</span>
@@ -229,6 +249,43 @@ function deviceColor(d: string) {
   return 'bg-violet-400';
 }
 
+const COUNTRY_NAMES: Record<string, string> = {
+  AF:'Afghanistan',AL:'Albania',DZ:'Algeria',AR:'Argentina',AU:'Australia',
+  AT:'Austria',BE:'Belgium',BR:'Brazil',CA:'Canada',CL:'Chile',CN:'China',
+  CO:'Colombia',HR:'Croatia',CZ:'Czech Republic',DK:'Denmark',EG:'Egypt',
+  FI:'Finland',FR:'France',DE:'Germany',GH:'Ghana',GR:'Greece',HK:'Hong Kong',
+  HU:'Hungary',IN:'India',ID:'Indonesia',IE:'Ireland',IL:'Israel',IT:'Italy',
+  JP:'Japan',KE:'Kenya',KR:'South Korea',MY:'Malaysia',MX:'Mexico',NL:'Netherlands',
+  NZ:'New Zealand',NG:'Nigeria',NO:'Norway',PK:'Pakistan',PH:'Philippines',
+  PL:'Poland',PT:'Portugal',RO:'Romania',RU:'Russia',SA:'Saudi Arabia',
+  ZA:'South Africa',ES:'Spain',SE:'Sweden',CH:'Switzerland',TW:'Taiwan',
+  TH:'Thailand',TR:'Turkey',UA:'Ukraine',GB:'United Kingdom',US:'United States',
+  VN:'Vietnam',AE:'United Arab Emirates',SG:'Singapore',
+};
+
+function countryFullName(code: string): string {
+  return COUNTRY_NAMES[code.toUpperCase()] ?? code;
+}
+
+function DeviceIcon({ device }: { device: string }) {
+  if (device === 'mobile') return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>
+    </svg>
+  );
+  if (device === 'tablet') return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>
+    </svg>
+  );
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+      <line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+    </svg>
+  );
+}
+
 function relativeTime(d: Date): string {
   const diff = Math.floor((Date.now() - d.getTime()) / 1000);
   if (diff < 60) return `${diff}s ago`;
@@ -265,7 +322,7 @@ function StatCard({ label, value, sub }: { label: string; value: string; sub?: s
   );
 }
 
-function Panel({ title, count, total, children }: { title: string; count: number; total?: number; children: React.ReactNode }) {
+function Panel({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
   return (
     <div className="bg-[#0d1a14] border border-[#1a2e22] rounded-xl overflow-hidden">
       <div className="px-5 py-4 border-b border-[#1a2e22]">
@@ -288,6 +345,22 @@ function RankRow({ label, count, total }: { label: string; count: number; total:
   );
 }
 
+function CountryRankRow({ country, count, total }: { country: string; count: number; total: number }) {
+  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+  const code = country.slice(0, 2).toUpperCase();
+  const name = countryFullName(code);
+  return (
+    <div className="px-5 py-2.5 flex items-center justify-between gap-3 relative">
+      <div className="absolute inset-0 bg-emerald-400/5" style={{ width: `${pct}%` }} />
+      <span className="flex items-center gap-2 relative z-10">
+        <span className="text-[#4a7060] text-[10px] font-bold bg-[#0d1a14] border border-[#1a2e22] px-1.5 py-0.5 rounded flex-shrink-0">{code}</span>
+        <span className="text-xs font-mono text-white">{name}</span>
+      </span>
+      <span className="text-xs font-mono text-white relative z-10 tabular-nums flex-shrink-0">{count.toLocaleString()}</span>
+    </div>
+  );
+}
+
 function ConfigRow({ label, value, mono, copy, children }: { label: string; value?: string; mono?: boolean; copy?: boolean; children?: React.ReactNode }) {
   return (
     <div className="px-5 py-3.5 flex items-center justify-between gap-4">
@@ -301,23 +374,6 @@ function ConfigRow({ label, value, mono, copy, children }: { label: string; valu
         </span>
       )}
     </div>
-  );
-}
-
-function CopyButton({ text }: { text: string }) {
-  // Client-side copy — inline script avoids needing a full client component
-  return (
-    <button
-      onClick={undefined}
-      data-copy={text}
-      className="text-[#6b8f7a] hover:text-emerald-400 transition-colors"
-      title="Copy"
-    >
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-      </svg>
-    </button>
   );
 }
 

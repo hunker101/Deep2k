@@ -79,7 +79,8 @@ export function statsRouter(db: Db): Router {
     const q = RangeQuery.safeParse(req.query);
     if (!q.success) { res.status(400).json({ error: 'invalid query' }); return; }
 
-    const result = await db.execute(sql`
+    // Step 1: fast base query — sites + totals
+    const baseResult = await db.execute(sql`
       SELECT
         s.id,
         s.domain,
@@ -97,7 +98,56 @@ export function statsRouter(db: Db): Router {
       ORDER BY s.created_at DESC
     `);
 
-    res.json(result.rows);
+    // Step 2: batch JSONB top-values for all sites at once
+    const [topPages, topCountries, topDevices] = await Promise.all([
+      db.execute(sql`
+        SELECT site_id::text, key AS value FROM (
+          SELECT site_id, key, SUM(value::int) AS cnt,
+            ROW_NUMBER() OVER (PARTITION BY site_id ORDER BY SUM(value::int) DESC) AS rn
+          FROM daily_stats, jsonb_each_text(top_paths)
+          WHERE top_paths != '{}'
+            ${q.data.from ? sql`AND date >= ${q.data.from}` : sql``}
+            ${q.data.to ? sql`AND date <= ${q.data.to}` : sql``}
+          GROUP BY site_id, key
+        ) t WHERE rn = 1
+      `),
+      db.execute(sql`
+        SELECT site_id::text, key AS value FROM (
+          SELECT site_id, key, SUM(value::int) AS cnt,
+            ROW_NUMBER() OVER (PARTITION BY site_id ORDER BY SUM(value::int) DESC) AS rn
+          FROM daily_stats, jsonb_each_text(countries)
+          WHERE countries != '{}'
+            ${q.data.from ? sql`AND date >= ${q.data.from}` : sql``}
+            ${q.data.to ? sql`AND date <= ${q.data.to}` : sql``}
+          GROUP BY site_id, key
+        ) t WHERE rn = 1
+      `),
+      db.execute(sql`
+        SELECT site_id::text, key AS value FROM (
+          SELECT site_id, key, SUM(value::int) AS cnt,
+            ROW_NUMBER() OVER (PARTITION BY site_id ORDER BY SUM(value::int) DESC) AS rn
+          FROM daily_stats, jsonb_each_text(devices)
+          WHERE devices != '{}'
+            ${q.data.from ? sql`AND date >= ${q.data.from}` : sql``}
+            ${q.data.to ? sql`AND date <= ${q.data.to}` : sql``}
+          GROUP BY site_id, key
+        ) t WHERE rn = 1
+      `),
+    ]);
+
+    // Build lookup maps
+    const pageMap = Object.fromEntries(topPages.rows.map((r: any) => [r.site_id, r.value]));
+    const countryMap = Object.fromEntries(topCountries.rows.map((r: any) => [r.site_id, r.value]));
+    const deviceMap = Object.fromEntries(topDevices.rows.map((r: any) => [r.site_id, r.value]));
+
+    const rows = baseResult.rows.map((r: any) => ({
+      ...r,
+      topPage: pageMap[r.id] ?? null,
+      topCountry: countryMap[r.id] ?? null,
+      topDevice: deviceMap[r.id] ?? null,
+    }));
+
+    res.json(rows);
   });
 
   return router;

@@ -1,6 +1,6 @@
 # Deep2k — Junard Session Progress
 
-**Last updated:** 2026-05-14
+**Last updated:** 2026-05-17
 **Session contributor:** Junard (hunker101)
 **Status legend:** ✅ done · 🟡 partial · ❌ not started
 
@@ -168,23 +168,47 @@ Same commands work on production — replace `localhost:3000` with `https://deep
 
 ## What's Next
 
+### Current Sprint — Dashboard Enhancement (pending commit, tested locally)
+
+**New / changed files:**
+- `apps/api/src/routes/stats.ts` — `sites-summary` now returns `topPage`, `topCountry`, `topDevice` per site
+- `apps/dashboard/src/lib/api.ts` — `SiteSummaryRow` type updated with the three new fields
+- `apps/dashboard/src/components/SitesTable.tsx` — sort by visitors/pageviews, filter tabs (All/Active/Inactive), `CountryBadge`, `DeviceIcon`
+- `apps/dashboard/src/components/TrafficChart.tsx` — inline visitor/pageview toggle buttons with totals
+- `apps/dashboard/src/components/AddSiteModal.tsx` — confirmation step before provisioning
+- `apps/dashboard/src/components/FloatingActions.tsx` — new FAB combining Add Site + Bulk Upload
+- `apps/dashboard/src/components/CopyButton.tsx` — new `'use client'` component with real clipboard copy + checkmark feedback (replaces broken `onClick={undefined}` stub)
+- `apps/dashboard/src/app/page.tsx` — sticky header, FAB wired in, stat counts moved into chart
+
+**Bug fixes in this sprint:**
+- `apps/api/src/lib/cloudflare.ts` — `deleteSiteFromKV` was deleting the wrong KV key (used bare `domain` instead of `domain:endpointPath`). Now constructs the correct key and also deletes the secondary `workerHost:endpointPath` entry.
+- `apps/api/src/routes/sites.ts` — updated call to `deleteSiteFromKV` to pass `row.endpointPath`
+
+---
+
 ### Phase 2 — Shopify Injection (not started)
-- Generate tracker script for a real Shopify store
-- Inject via Shopify Script Tags API or `theme.liquid`
+- Get tracker script from `GET /api/sites/:id/script` on Render
+- Inject inline into Shopify `theme.liquid` (recommended — hides origin, no external load)
 - Real events will flow: Shopify → CF Worker → Render API → DB → Dashboard
+- Dashboard AddSiteModal already outputs the script — just needs copy-paste into theme
 
 ### Phase 2b — WordPress Injection (not started)
-- Lightweight plugin or `functions.php` injection
+- Same approach — inline script into `functions.php` or a micro-plugin via `wp_head()`
 
-### Phase 3 — Production Hardening (not started)
-- Attach real domain to the Cloudflare Worker
-- Push pilot site configs into `SITES_KV` (currently hardcoded in `wrangler.toml` `SITES_JSON`)
-- Wire Worker to read sites from `SITES_KV` instead of `SITES_JSON` env var
-- Set `TZ=UTC` on Render API to fix date alignment
+### Phase 3 — Production Hardening (partial ✅)
+
+| Item | Status | Notes |
+|---|---|---|
+| CF env vars on Render | ✅ | `CF_ACCOUNT_ID`, `CF_API_TOKEN`, `CF_SITES_KV_NAMESPACE_ID`, `CF_WORKER_URL` all set — KV sync is live |
+| `TZ=UTC` on Render | ✅ | Already set — date alignment fixed |
+| Worker reads sites from `SITES_KV` | ✅ | Worker checks KV first, falls back to `SITES_JSON`. API pushes to KV on every `POST /api/sites` |
+| Attach real domain to Worker | ❌ | Need CF Worker route on each store's zone (store DNS through Cloudflare, route `store.com/<endpoint_path>` → Worker). Required for true first-party beacons. |
+| Monthly partition management | ❌ | Partitions currently only go through July 2026. Need monthly cron or manual run of `infra/scripts/create-partitions.ts` before each new month. |
 
 ### Phase 4 — Monitoring (not started)
-- Alert when a site stops sending events
-- Worker error rate tracking
+- Cron job checking `MAX(received_at)` per site — alert when >24h since last event
+- Dashboard staleness badge (time-based, not period-relative)
+- Worker error rate tracking (currently all backend errors are swallowed silently)
 
 ---
 
@@ -205,4 +229,7 @@ Same commands work on production — replace `localhost:3000` with `https://deep
 | `apps/dashboard/src/app/sites/[id]/page.tsx` | Site detail — charts, panels, beacon config |
 | `apps/dashboard/src/lib/api.ts` | Dashboard API client — all fetch helpers + types |
 | `apps/dashboard/src/middleware.ts` | Auth gate — redirects to /login if no cookie |
+| `apps/dashboard/src/components/FloatingActions.tsx` | FAB — expands to Add Site + Bulk Upload buttons |
+| `apps/dashboard/src/components/CopyButton.tsx` | Client component — clipboard copy with checkmark feedback |
+| `apps/api/src/lib/cloudflare.ts` | KV sync — push/delete site configs to SITES_KV |
 | `infra/scripts/seed-pilot.ts` | Seeds 5 pilot sites + prints SITES_JSON snippet |
