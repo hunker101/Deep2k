@@ -25,6 +25,13 @@ interface WorkerSite {
   backend_url?: string;
 }
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Max-Age': '86400',
+};
+
 // Transparent 1x1 GIF.
 const GIF_BYTES = new Uint8Array([
   0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0x80, 0x00, 0x00, 0xff, 0xff, 0xff,
@@ -34,6 +41,11 @@ const GIF_BYTES = new Uint8Array([
 
 export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    // Handle CORS preflight from browser-side beacons on cross-origin Shopify stores.
+    if (req.method === 'OPTIONS') {
+      return new Response(null, { status: 204, headers: CORS_HEADERS });
+    }
+
     const url = new URL(req.url);
     const hostHeader = req.headers.get('host') ?? '';
     const host = hostHeader.toLowerCase().split(':')[0] ?? '';
@@ -137,9 +149,9 @@ export default {
 
     if (req.method === 'GET') {
       return new Response(GIF_BYTES, {
-        headers: { 'Content-Type': 'image/gif', 'Cache-Control': 'no-store' },
+        headers: { 'Content-Type': 'image/gif', 'Cache-Control': 'no-store', ...CORS_HEADERS },
       });
     }
-    return new Response(null, { status: 204 });
+    return new Response(null, { status: 204, headers: CORS_HEADERS });
   },
 };

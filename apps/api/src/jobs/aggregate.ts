@@ -7,6 +7,7 @@ export async function runAggregation(db: Db, lookbackHours = 2): Promise<number>
       SELECT DISTINCT site_id, date_trunc('day', timestamp)::date AS day
       FROM events
       WHERE received_at > now() - (${lookbackHours} || ' hours')::interval
+        AND site_id IN (SELECT id FROM sites)
     ),
     rollup AS (
       SELECT

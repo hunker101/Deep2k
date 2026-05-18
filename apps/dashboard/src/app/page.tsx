@@ -23,6 +23,8 @@ export default async function HomePage({
   ]);
 
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const now = Date.now();
+  const activeSiteCount = sites.filter(s => s.lastEvent && (now - new Date(s.lastEvent).getTime()) < 24 * 60 * 60 * 1000).length;
 
   return (
     <div className="min-h-screen bg-[#080f0c]">
@@ -73,7 +75,7 @@ export default async function HomePage({
           <StatCard label="Total pageviews" value={overview.totalPageviews} />
           <StatCard label="Unique visitors" value={overview.totalVisitors} />
           <StatCard label="Sites monitored" value={overview.siteCount} note="Across all backends" />
-          <StatCard label="Sites active" value={overview.siteCount} note="All tracked" accent />
+          <StatCard label="Sites active" value={activeSiteCount} note="Last 24 hours" accent />
         </div>
 
         {/* Combined chart */}

@@ -22,7 +22,7 @@ export function GetScriptButton({ siteId }: { siteId: string }) {
   }
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(script);
+    await navigator.clipboard.writeText(`<script>\n${script}\n</script>`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }

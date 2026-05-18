@@ -67,43 +67,52 @@ export async function sendDiscordReport(db: Db): Promise<void> {
   // Format date nicely
   const label = yesterday.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-  // Build fields
-  const topSites = sites.slice(0, 5).map((s, i) =>
-    `\`${i + 1}.\` **${s.domain}** — ${s.visitors} visitors · ${s.pageviews} pageviews`
-  ).join('\n') || '_No data_';
+  const COUNTRY_NAMES: Record<string, string> = {
+    US:'United States',GB:'United Kingdom',CA:'Canada',AU:'Australia',PH:'Philippines',
+    DE:'Germany',FR:'France',NL:'Netherlands',BR:'Brazil',IN:'India',MX:'Mexico',
+    SG:'Singapore',JP:'Japan',KR:'South Korea',ID:'Indonesia',TH:'Thailand',
+    NG:'Nigeria',ZA:'South Africa',AE:'United Arab Emirates',IT:'Italy',ES:'Spain',
+    SE:'Sweden',NO:'Norway',DK:'Denmark',FI:'Finland',PL:'Poland',UA:'Ukraine',
+    RU:'Russia',TR:'Turkey',SA:'Saudi Arabia',MY:'Malaysia',VN:'Vietnam',
+  };
 
-  const bottomSites = [...sites].reverse().slice(0, 3).map((s, i) =>
+  const countryLabel = (code: string) => COUNTRY_NAMES[code.toUpperCase()] ?? code;
+
+  // Build fields
+  const topSites = sites.slice(0, 5).map((s, i) => {
+    const medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
+    return `${medals[i]} **${s.domain}**\n┗ ${s.visitors} visitors · ${s.pageviews} pageviews`;
+  }).join('\n') || '_No data_';
+
+  const bottomSites = [...sites].filter(s => s.visitors > 0).reverse().slice(0, 3).map((s, i) =>
     `\`${i + 1}.\` **${s.domain}** — ${s.visitors} visitors`
   ).join('\n') || '_No data_';
 
-  const topCountries = countries.map(c =>
-    `**${c.country}** — ${c.cnt} visitors`
+  const topCountries = countries.map((c, i) =>
+    `\`${i + 1}.\` **${countryLabel(c.country)}** — ${c.cnt} visitors`
   ).join('\n') || '_No data_';
 
-  const deviceBreakdown = devices.map(d =>
-    `**${d.device.charAt(0).toUpperCase() + d.device.slice(1)}** — ${totalDevices > 0 ? Math.round((Number(d.cnt) / totalDevices) * 100) : 0}%`
-  ).join('\n') || '_No data_';
+  const deviceBreakdown = devices.map(d => {
+    const pct = totalDevices > 0 ? Math.round((Number(d.cnt) / totalDevices) * 100) : 0;
+    const bar = '█'.repeat(Math.round(pct / 10)) + '░'.repeat(10 - Math.round(pct / 10));
+    return `**${d.device.charAt(0).toUpperCase() + d.device.slice(1)}** ${bar} ${pct}%`;
+  }).join('\n') || '_No data_';
 
   const payload = {
     embeds: [{
-      title: `📊 Deep2K Daily Report`,
-      description: `**${label}**`,
+      title: '📊 Deep2K Daily Report',
+      description: `🗓️ **${label}**\n\n> **${totals.total_visitors.toLocaleString()}** visitors  ·  **${totals.total_pageviews.toLocaleString()}** pageviews  ·  **${totals.active_sites}** active sites`,
       color: 0x34d399,
       fields: [
         {
-          name: '📈 Overview',
-          value: `**${totals.total_visitors.toLocaleString()}** visitors · **${totals.total_pageviews.toLocaleString()}** pageviews · **${totals.active_sites}** active sites`,
-          inline: false,
-        },
-        {
-          name: '🏆 Top Sites',
+          name: '🏆 Top Performing Sites',
           value: topSites,
           inline: false,
         },
         {
-          name: '📉 Lowest Sites',
+          name: '📉 Lowest Performing Sites',
           value: bottomSites,
-          inline: true,
+          inline: false,
         },
         {
           name: '🌍 Top Countries',
@@ -111,12 +120,12 @@ export async function sendDiscordReport(db: Db): Promise<void> {
           inline: true,
         },
         {
-          name: '📱 Devices',
+          name: '📱 Device Breakdown',
           value: deviceBreakdown,
-          inline: false,
+          inline: true,
         },
       ],
-      footer: { text: 'Deep2K Analytics · daily report' },
+      footer: { text: 'Deep2K Analytics · automatic daily report · 8:00 AM UTC' },
       timestamp: new Date().toISOString(),
     }],
   };
