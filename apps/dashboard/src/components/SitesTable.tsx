@@ -106,17 +106,21 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
   const [filter, setFilter] = useState<FilterTab>('all');
   const [deleting, setDeleting] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
   const router = useRouter();
+
+  const PAGE_SIZE = 10;
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) setSortDir(d => d === 'desc' ? 'asc' : 'desc');
     else { setSortKey(key); setSortDir('desc'); }
+    setPage(1);
   }
 
   const filtered = sites
     .filter(s => {
-      if (filter === 'active') return s.totalPageviews > 0;
-      if (filter === 'inactive') return s.totalPageviews === 0;
+      if (filter === 'active') return s.totalPageviews > 0 && !isStale(s.lastEvent);
+      if (filter === 'inactive') return s.totalPageviews === 0 || isStale(s.lastEvent);
       return true;
     })
     .filter(s => !query.trim() || s.domain.toLowerCase().includes(query.toLowerCase().trim()))
@@ -127,13 +131,17 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
       return sortDir === 'desc' ? -val : val;
     });
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   async function confirmDelete(id: string) {
     setDeleting(id);
     setConfirmId(null);
     try {
       await fetch(`/api/sites/${id}`, { method: 'DELETE' });
       router.refresh();
-    } finally {
+      setDeleting(null);
+    } catch {
       setDeleting(null);
     }
   }
@@ -149,7 +157,9 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
       <div className="px-5 py-4 border-b border-[#1a2e22] flex flex-wrap items-center justify-between gap-3">
         <div>
           <span className="font-semibold text-sm text-white">Sites</span>
-          <span className="text-[#4a7060] font-mono text-xs ml-2">{filtered.length} of {sites.length} shown</span>
+          <span className="text-[#4a7060] font-mono text-xs ml-2">
+            {filtered.length === sites.length ? `${sites.length} sites` : `${filtered.length} of ${sites.length} shown`}
+          </span>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {/* Filter tabs */}
@@ -157,7 +167,7 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
             {(['all', 'active', 'inactive'] as FilterTab[]).map(f => (
               <button
                 key={f}
-                onClick={() => setFilter(f)}
+                onClick={() => { setFilter(f); setPage(1); }}
                 className={`px-3 py-1 rounded-md text-xs font-mono capitalize transition-colors ${
                   filter === f ? 'bg-[#1a2e22] text-white' : 'text-[#4a7060] hover:text-white'
                 }`}
@@ -173,7 +183,7 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
             </svg>
             <input
               value={query}
-              onChange={e => setQuery(e.target.value)}
+              onChange={e => { setQuery(e.target.value); setPage(1); }}
               placeholder="Search domains…"
               className="bg-[#080f0c] border border-[#1a2e22] focus:border-emerald-500 rounded-lg pl-8 pr-4 py-1.5 text-xs font-mono text-white placeholder-[#3a5244] focus:outline-none transition-colors w-52"
             />
@@ -189,27 +199,67 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
       </div>
 
       {/* Confirm delete overlay */}
-      {confirmId && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4">
-          <div className="bg-[#0d1a14] border border-[#1a2e22] rounded-2xl p-6 w-full max-w-sm">
-            <h3 className="text-white font-semibold mb-1">Delete site?</h3>
-            <p className="text-xs font-mono text-[#6b8f7a] mb-5">
-              This will remove <span className="text-white">{sites.find(s => s.id === confirmId)?.domain}</span> and all its data permanently.
-            </p>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => confirmDelete(confirmId)}
-                disabled={!!deleting}
-                className="bg-red-500 hover:bg-red-400 disabled:opacity-40 text-white font-semibold px-5 py-2 rounded-lg text-sm transition-colors"
-              >
-                {deleting ? 'Deleting…' : 'Yes, delete'}
-              </button>
-              <button
-                onClick={() => setConfirmId(null)}
-                className="text-[#6b8f7a] hover:text-white text-sm font-mono transition-colors"
-              >
-                Cancel
-              </button>
+      {(confirmId || deleting) && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+          <div className="bg-[#0d1a14] border border-[#1a2e22] rounded-2xl w-full max-w-sm">
+            {/* Header */}
+            <div className="flex items-start justify-between px-6 pt-6 pb-4">
+              <div>
+                <p className="text-red-400 text-[10px] font-bold uppercase tracking-widest mb-1.5">Danger Zone</p>
+                <h3 className="text-white font-semibold text-xl">{deleting ? 'Removing site…' : 'Delete site?'}</h3>
+              </div>
+              {!deleting && (
+                <button onClick={() => setConfirmId(null)} className="text-[#6b8f7a] hover:text-white transition-colors mt-1 p-1">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            <div className="px-6 pb-6 space-y-5">
+              {deleting ? (
+                /* Loading state */
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 text-xs font-mono text-[#6b8f7a]">
+                    <svg className="animate-spin flex-shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                    </svg>
+                    Removing site and all associated data…
+                  </div>
+                  <div className="w-full bg-[#060c09] border border-[#1a2e22] rounded-full h-1.5 overflow-hidden">
+                    <div className="bg-red-400 h-full rounded-full animate-pulse w-3/4" />
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="bg-red-400/5 border border-red-400/20 rounded-xl px-4 py-3">
+                    <p className="text-xs font-mono text-[#6b8f7a]">
+                      This will permanently remove{' '}
+                      <span className="text-white font-semibold">{sites.find(s => s.id === confirmId)?.domain}</span>{' '}
+                      and all its tracked events and stats.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => confirmDelete(confirmId!)}
+                      className="flex-1 bg-red-500 hover:bg-red-400 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+                        <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                      </svg>
+                      Yes, delete
+                    </button>
+                    <button
+                      onClick={() => setConfirmId(null)}
+                      className="flex-1 bg-[#1a2e22] hover:bg-[#213d2a] border border-[#2a4a32] text-white font-semibold py-2.5 rounded-lg text-sm transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -240,7 +290,7 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#0f2018]">
-              {filtered.map(s => (
+              {paginated.map(s => (
                 <tr
                   key={s.id}
                   onClick={() => router.push(`/sites/${s.id}`)}
@@ -254,9 +304,9 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
                   </td>
                   <td className="px-5 py-3.5 text-right font-mono tabular-nums text-white text-sm font-semibold tracking-tight">{s.totalVisitors.toLocaleString()}</td>
                   <td className="px-5 py-3.5 text-right font-mono tabular-nums text-white text-sm font-semibold tracking-tight">{s.totalPageviews.toLocaleString()}</td>
-                  <td className="px-5 py-3.5 font-mono text-[#6b8f7a] text-xs">
+                  <td className="px-5 py-3.5 font-mono text-[#6b8f7a] text-xs max-w-[180px]">
                     {s.topPage
-                      ? <span>{`/${s.topPage.replace(/^\//, '')}`}</span>
+                      ? <span className="block truncate" title={`/${s.topPage.replace(/^\//, '')}`}>{`/${s.topPage.replace(/^\//, '')}`}</span>
                       : <span className="text-[#4a7060]">—</span>}
                   </td>
                   <td className="px-5 py-3.5"><CountryBadge country={s.topCountry} /></td>
@@ -280,6 +330,64 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="px-5 py-3 border-t border-[#1a2e22] flex items-center justify-between">
+          <span className="text-xs font-mono text-[#4a7060]">
+            {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
+          </span>
+          <div className="flex items-center gap-1">
+            {/* Prev */}
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="w-7 h-7 flex items-center justify-center rounded-md text-[#4a7060] hover:text-white hover:bg-[#1a2e22] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+
+            {/* Page pills */}
+            {(() => {
+              const delta = 2;
+              const range: (number | '…')[] = [];
+              const left = Math.max(2, page - delta);
+              const right = Math.min(totalPages - 1, page + delta);
+
+              range.push(1);
+              if (left > 2) range.push('…');
+              for (let i = left; i <= right; i++) range.push(i);
+              if (right < totalPages - 1) range.push('…');
+              if (totalPages > 1) range.push(totalPages);
+
+              return range.map((p, i) =>
+                p === '…' ? (
+                  <span key={`ellipsis-${i}`} className="w-7 h-7 flex items-center justify-center text-xs font-mono text-[#4a7060]">…</span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p as number)}
+                    className={`w-7 h-7 flex items-center justify-center rounded-md text-xs font-mono transition-colors ${
+                      page === p ? 'bg-emerald-400/20 text-emerald-400 border border-emerald-400/30' : 'text-[#6b8f7a] hover:text-white hover:bg-[#1a2e22]'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                )
+              );
+            })()}
+
+            {/* Next */}
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="w-7 h-7 flex items-center justify-center rounded-md text-[#4a7060] hover:text-white hover:bg-[#1a2e22] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
         </div>
       )}
     </div>

@@ -4,7 +4,7 @@ import { sql } from 'drizzle-orm';
 export async function runAggregation(db: Db, lookbackHours = 2): Promise<number> {
   const result = await db.execute(sql`
     WITH affected AS (
-      SELECT DISTINCT site_id, date_trunc('day', timestamp)::date AS day
+      SELECT DISTINCT site_id, date_trunc('day', received_at)::date AS day
       FROM events
       WHERE received_at > now() - (${lookbackHours} || ' hours')::interval
         AND site_id IN (SELECT id FROM sites)
@@ -23,7 +23,7 @@ export async function runAggregation(db: Db, lookbackHours = 2): Promise<number>
             SELECT COALESCE(e2.path, '/') AS path, COUNT(*)::int AS cnt
             FROM events e2
             WHERE e2.site_id = a.site_id
-              AND date_trunc('day', e2.timestamp)::date = a.day
+              AND date_trunc('day', e2.received_at)::date = a.day
               AND e2.path IS NOT NULL
             GROUP BY e2.path
             ORDER BY cnt DESC
@@ -38,7 +38,7 @@ export async function runAggregation(db: Db, lookbackHours = 2): Promise<number>
             SELECT COALESCE(e2.country, 'unknown') AS country, COUNT(DISTINCT e2.visitor_id)::int AS cnt
             FROM events e2
             WHERE e2.site_id = a.site_id
-              AND date_trunc('day', e2.timestamp)::date = a.day
+              AND date_trunc('day', e2.received_at)::date = a.day
               AND e2.country IS NOT NULL AND e2.country <> ''
             GROUP BY e2.country
             ORDER BY cnt DESC
@@ -53,7 +53,7 @@ export async function runAggregation(db: Db, lookbackHours = 2): Promise<number>
             SELECT COALESCE(e2.device, 'unknown') AS device, COUNT(DISTINCT e2.visitor_id)::int AS cnt
             FROM events e2
             WHERE e2.site_id = a.site_id
-              AND date_trunc('day', e2.timestamp)::date = a.day
+              AND date_trunc('day', e2.received_at)::date = a.day
             GROUP BY e2.device
             ORDER BY cnt DESC
           ) t
@@ -62,7 +62,7 @@ export async function runAggregation(db: Db, lookbackHours = 2): Promise<number>
       FROM affected a
       JOIN events e
         ON e.site_id = a.site_id
-        AND date_trunc('day', e.timestamp)::date = a.day
+        AND date_trunc('day', e.received_at)::date = a.day
       GROUP BY a.site_id, a.day
     )
     INSERT INTO daily_stats (site_id, date, pageviews, unique_visitors, top_paths, countries, devices)

@@ -24,20 +24,18 @@ export default async function HomePage({
 
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const now = Date.now();
-  const activeSiteCount = sites.filter(s => s.lastEvent && (now - new Date(s.lastEvent).getTime()) < 24 * 60 * 60 * 1000).length;
+  const activeSiteCount = sites.filter(s => s.totalPageviews > 0 && s.lastEvent && (now - new Date(s.lastEvent).getTime()) < 24 * 60 * 60 * 1000).length;
 
   return (
     <div className="min-h-screen bg-[#080f0c]">
       {/* Top nav */}
       <header className="border-b border-[#1a2e22] px-6 py-3 flex items-center justify-between bg-[#080f0c]/80 backdrop-blur-sm sticky top-0 z-30">
         {/* Logo */}
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 bg-emerald-400/10 border border-emerald-400/20 rounded-lg flex items-center justify-center">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-            </svg>
-          </div>
-          <span className="text-white font-bold tracking-tight">Deep<span className="text-emerald-400">2K</span></span>
+        <div className="flex items-center gap-2">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+          <span className="text-white font-semibold">Deep<span className="text-emerald-400">2K</span></span>
         </div>
 
         {/* Date */}
