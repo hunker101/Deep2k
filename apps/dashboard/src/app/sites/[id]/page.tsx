@@ -350,7 +350,7 @@ function RankRow({ label, count, total }: { label: string; count: number; total:
   return (
     <div className="px-5 py-2.5 flex items-center justify-between gap-3 relative">
       <div className="absolute inset-0 bg-emerald-400/5" style={{ width: `${pct}%` }} />
-      <span className="text-xs font-mono text-[#6b8f7a] relative z-10 truncate">/ {label.replace(/^\//, '')}</span>
+      <span className="text-xs font-mono text-[#6b8f7a] relative z-10 break-all">/ {label.replace(/^\//, '')}</span>
       <span className="text-xs font-mono text-white relative z-10 tabular-nums flex-shrink-0">{count.toLocaleString()}</span>
     </div>
   );
