@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [token, setToken] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [show, setShow] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,13 +19,13 @@ export default function LoginPage() {
       const res = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token }),
+        body: JSON.stringify({ username, password }),
       });
       if (res.ok) {
         router.push('/');
         router.refresh();
       } else {
-        setError('Invalid token. Check your ADMIN_TOKEN.');
+        setError('Invalid username or password.');
       }
     } catch {
       setError('Connection error.');
@@ -53,15 +54,29 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs text-[#6b8f7a] mb-1.5 font-mono">Admin token</label>
+              <label className="block text-xs text-[#6b8f7a] mb-1.5 font-mono">Username</label>
+              <input
+                type="text"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                placeholder="enter username"
+                className="w-full bg-[#080f0c] border border-[#1a2e22] rounded-lg px-4 py-2.5 text-white text-sm font-mono placeholder-[#3a5244] focus:outline-none focus:border-emerald-500"
+                required
+                autoComplete="username"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs text-[#6b8f7a] mb-1.5 font-mono">Password</label>
               <div className="relative">
                 <input
                   type={show ? 'text' : 'password'}
-                  value={token}
-                  onChange={e => setToken(e.target.value)}
-                  placeholder="paste your ADMIN_TOKEN"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="enter password"
                   className="w-full bg-[#080f0c] border border-[#1a2e22] rounded-lg px-4 py-2.5 text-white text-sm font-mono placeholder-[#3a5244] focus:outline-none focus:border-emerald-500 pr-16"
                   required
+                  autoComplete="current-password"
                 />
                 <button
                   type="button"
@@ -79,7 +94,7 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={loading || !token}
+              disabled={loading || !username || !password}
               className="w-full bg-emerald-400 hover:bg-emerald-300 disabled:opacity-40 disabled:cursor-not-allowed text-black font-semibold rounded-lg py-2.5 text-sm transition-colors"
             >
               {loading ? 'Signing in…' : 'Sign in →'}

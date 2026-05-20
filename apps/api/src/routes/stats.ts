@@ -74,12 +74,21 @@ export function statsRouter(db: Db): Router {
     });
   });
 
+  const summaryCache = new Map<string, { data: unknown; expires: number }>();
+
   // Sites list enriched with aggregate stats for the home page table.
   router.get('/sites-summary', async (req: Request, res: Response) => {
     const q = RangeQuery.safeParse(req.query);
     if (!q.success) { res.status(400).json({ error: 'invalid query' }); return; }
 
-    // Step 1: fast base query — sites + totals + last event timestamp
+    const cacheKey = `${q.data.from ?? ''}|${q.data.to ?? ''}`;
+    const cached = summaryCache.get(cacheKey);
+    if (cached && Date.now() < cached.expires) {
+      res.json(cached.data);
+      return;
+    }
+
+    // Step 1: fast base query — sites + totals + last event via single GROUP BY
     const baseResult = await db.execute(sql`
       SELECT
         s.id,
@@ -90,12 +99,17 @@ export function statsRouter(db: Db): Router {
         s.created_at    AS "createdAt",
         COALESCE(SUM(ds.pageviews), 0)::int       AS "totalPageviews",
         COALESCE(SUM(ds.unique_visitors), 0)::int AS "totalVisitors",
-        (SELECT MAX(e.received_at) FROM events e WHERE e.site_id = s.id) AS "lastEvent"
+        le.last_event                             AS "lastEvent"
       FROM sites s
       LEFT JOIN daily_stats ds ON ds.site_id = s.id
         ${q.data.from ? sql`AND ds.date >= ${q.data.from}` : sql``}
         ${q.data.to ? sql`AND ds.date <= ${q.data.to}` : sql``}
-      GROUP BY s.id
+      LEFT JOIN (
+        SELECT site_id, MAX(received_at) AS last_event
+        FROM events
+        GROUP BY site_id
+      ) le ON le.site_id = s.id
+      GROUP BY s.id, le.last_event
       ORDER BY s.created_at DESC
     `);
 
@@ -148,6 +162,7 @@ export function statsRouter(db: Db): Router {
       topDevice: deviceMap[r.id] ?? null,
     }));
 
+    summaryCache.set(cacheKey, { data: rows, expires: Date.now() + 30_000 });
     res.json(rows);
   });
 

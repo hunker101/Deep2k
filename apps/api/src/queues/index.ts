@@ -23,7 +23,7 @@ export function enqueue(event: IngestEvent): void {
   }
 }
 
-export async function flush(): Promise<void> {
+export async function flush(isRetry = false): Promise<void> {
   if (timer) {
     clearTimeout(timer);
     timer = null;
@@ -45,6 +45,12 @@ export async function flush(): Promise<void> {
     );
     console.log(`[queue] flushed ${batch.length} events`);
   } catch (err) {
-    console.error('[queue] flush failed, dropping', batch.length, 'events:', err);
+    if (!isRetry) {
+      console.error('[queue] flush failed, retrying in 5s:', err);
+      buffer = [...batch, ...buffer];
+      setTimeout(() => void flush(true), 5_000);
+    } else {
+      console.error('[queue] flush retry failed, dropping', batch.length, 'events:', err);
+    }
   }
 }

@@ -32,11 +32,11 @@ app.use('/api', adminAuth(env.ADMIN_TOKEN), sitesRouter(db, env));
 app.use('/api', adminAuth(env.ADMIN_TOKEN), statsRouter(db));
 app.use('/api', adminAuth(env.ADMIN_TOKEN), adminRouter(db));
 
-// Hourly aggregation at :05.
+// Hourly aggregation at :05 with 3h lookback for overlap safety.
 const aggregationTask = cron.schedule('5 * * * *', async () => {
   console.log('[cron] aggregation starting');
   try {
-    const rows = await runAggregation(db);
+    const rows = await runAggregation(db, 3);
     console.log(`[cron] aggregation done, ${rows} rows upserted`);
   } catch (err) {
     console.error('[cron] aggregation failed:', err);
