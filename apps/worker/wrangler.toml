@@ -11,6 +11,13 @@ id = "817ae773882f4c43b3018065ccea09a7"
 binding = "SITES_KV"
 id = "8e1b9b0fbe9d4b379436cc3bd6b61bfb"
 
+[[kv_namespaces]]
+binding = "PENDING_KV"
+id = "6f09260ed30444afbf55edfa340d8499"
+
+[triggers]
+crons = ["* * * * *"]
+
 # Dev-only vars. In prod these come from the dashboard runtime config + KV.
 [vars]
 BACKEND_URL = "https://deep2k.onrender.com/ingest"

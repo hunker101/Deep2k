@@ -8,6 +8,9 @@ import { detectDevice } from './device.js';
 
 interface KVNamespace {
   get(key: string): Promise<string | null>;
+  put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
+  list(options?: { prefix?: string }): Promise<{ keys: { name: string }[] }>;
+  delete(key: string): Promise<void>;
 }
 
 interface Env {
@@ -16,6 +19,7 @@ interface Env {
   SITES_JSON: string;
   SALT_KV?: KVNamespace;
   SITES_KV?: KVNamespace;
+  PENDING_KV?: KVNamespace;
 }
 
 interface WorkerSite {
@@ -119,33 +123,36 @@ export default {
       timestamp: data.t,
     };
 
+    const resolvedSite = site;
+    const backendUrl = resolvedSite.backend_url ?? env.BACKEND_URL;
     const jitterMs = Math.random() * 500;
-    ctx.waitUntil(
-      new Promise<void>(resolve => setTimeout(resolve, jitterMs)).then(() =>
-        fetch(site.backend_url ?? env.BACKEND_URL, {
+
+    async function forwardEvent(): Promise<void> {
+      await new Promise<void>(resolve => setTimeout(resolve, jitterMs));
+      try {
+        await fetch(backendUrl, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Site-Auth': site.secret,
-          },
+          headers: { 'Content-Type': 'application/json', 'X-Site-Auth': resolvedSite.secret },
           body: JSON.stringify(event),
-        }).catch(() =>
-          // Retry once after 1s before giving up
-          new Promise<void>(resolve => setTimeout(resolve, 1000)).then(() =>
-            fetch(site.backend_url ?? env.BACKEND_URL, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'X-Site-Auth': site.secret,
-              },
-              body: JSON.stringify(event),
-            }).catch(err => {
-              console.error(`[worker] failed to forward event for site ${site.id} after retry:`, err);
-            })
-          )
-        ),
-      ),
-    );
+        });
+      } catch {
+        await new Promise<void>(resolve => setTimeout(resolve, 10000));
+        try {
+          await fetch(backendUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Site-Auth': resolvedSite.secret },
+            body: JSON.stringify(event),
+          });
+        } catch {
+          if (env.PENDING_KV) {
+            const key = `evt:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+            await env.PENDING_KV.put(key, JSON.stringify({ event, secret: resolvedSite.secret, backendUrl }), { expirationTtl: 86400 });
+          }
+        }
+      }
+    }
+
+    ctx.waitUntil(forwardEvent());
 
     if (req.method === 'GET') {
       return new Response(GIF_BYTES, {
@@ -153,5 +160,27 @@ export default {
       });
     }
     return new Response(null, { status: 204, headers: CORS_HEADERS });
+  },
+
+  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    if (!env.PENDING_KV) return;
+    const list = await env.PENDING_KV.list({ prefix: 'evt:' });
+    ctx.waitUntil(
+      Promise.all(
+        list.keys.map(async ({ name }) => {
+          const raw = await env.PENDING_KV!.get(name);
+          if (!raw) return;
+          try {
+            const { event, secret, backendUrl } = JSON.parse(raw) as { event: unknown; secret: string; backendUrl: string };
+            const res = await fetch(backendUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'X-Site-Auth': secret },
+              body: JSON.stringify(event),
+            });
+            if (res.ok) await env.PENDING_KV!.delete(name);
+          } catch { /* leave in KV, retry next minute */ }
+        }),
+      ),
+    );
   },
 };
