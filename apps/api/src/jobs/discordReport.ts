@@ -64,6 +64,20 @@ export async function sendDiscordReport(db: Db): Promise<void> {
   const devices = devicesResult.rows as unknown as DeviceRow[];
   const totalDevices = devices.reduce((s, d) => s + Number(d.cnt), 0);
 
+  // Sites that had events before but went silent in the last 24h (possible WAF block)
+  const silentResult = await db.execute(sql`
+    SELECT s.domain
+    FROM sites s
+    WHERE EXISTS (
+      SELECT 1 FROM events e WHERE e.site_id = s.id
+    )
+    AND NOT EXISTS (
+      SELECT 1 FROM events e WHERE e.site_id = s.id AND e.received_at > now() - interval '24 hours'
+    )
+    ORDER BY s.domain
+  `);
+  const silentSites = silentResult.rows as unknown as { domain: string }[];
+
   // Format date nicely
   const label = yesterday.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -124,6 +138,11 @@ export async function sendDiscordReport(db: Db): Promise<void> {
           value: deviceBreakdown,
           inline: true,
         },
+        ...(silentSites.length > 0 ? [{
+          name: '⚠️ Silent Sites (0 events in 24h)',
+          value: silentSites.map(s => `\`${s.domain}\``).join('\n'),
+          inline: false,
+        }] : []),
       ],
       footer: { text: 'Deep2K Analytics · automatic daily report · 8:00 AM UTC' },
       timestamp: new Date().toISOString(),
