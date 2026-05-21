@@ -69,18 +69,18 @@ export default {
         const s = sites[host];
         if (s && url.pathname === s.endpoint_path) site = s;
       } catch {
-        return new Response('config error', { status: 500 });
+        return new Response('config error', { status: 500, headers: CORS_HEADERS });
       }
     }
     if (!site) {
-      return new Response('not found', { status: 404 });
+      return new Response('not found', { status: 404, headers: CORS_HEADERS });
     }
 
     // Path already matched during KV lookup (hostname:pathname key).
     // For SITES_JSON fallback, path was also validated above.
 
     if (req.method !== 'POST' && req.method !== 'GET') {
-      return new Response('method not allowed', { status: 405 });
+      return new Response('method not allowed', { status: 405, headers: CORS_HEADERS });
     }
 
     let payload: unknown;
@@ -88,21 +88,21 @@ export default {
       if (req.method === 'POST') {
         const len = req.headers.get('content-length');
         if (len && Number(len) > MAX_PAYLOAD_BYTES) {
-          return new Response('payload too large', { status: 413 });
+          return new Response('payload too large', { status: 413, headers: CORS_HEADERS });
         }
         payload = await req.json();
       } else {
         const d = url.searchParams.get('d');
-        if (!d) return new Response('bad request', { status: 400 });
+        if (!d) return new Response('bad request', { status: 400, headers: CORS_HEADERS });
         payload = JSON.parse(decodeURIComponent(d));
       }
     } catch {
-      return new Response('bad request', { status: 400 });
+      return new Response('bad request', { status: 400, headers: CORS_HEADERS });
     }
 
     const parsed = BrowserEventPayloadSchema.safeParse(payload);
     if (!parsed.success) {
-      return new Response('invalid payload', { status: 400 });
+      return new Response('invalid payload', { status: 400, headers: CORS_HEADERS });
     }
     const data = parsed.data;
 

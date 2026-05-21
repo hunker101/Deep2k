@@ -59,6 +59,35 @@ function isStale(lastEvent: string | null): boolean {
   return Date.now() - new Date(lastEvent).getTime() > 24 * 60 * 60 * 1000;
 }
 
+function getStatus(s: SiteSummaryRow): string {
+  if (s.totalPageviews > 0 && !isStale(s.lastEvent)) return 'Active';
+  if (s.totalPageviews > 0 && isStale(s.lastEvent)) return 'Stale';
+  return 'Inactive';
+}
+
+function exportCSV(sites: SiteSummaryRow[]) {
+  const today = new Date().toISOString().slice(0, 10);
+  const headers = ['Domain', 'Status', 'Pageviews', 'Unique Visitors', 'Top Country', 'Top Device'];
+  const rows = sites.map(s => [
+    s.domain,
+    getStatus(s),
+    s.totalPageviews,
+    s.totalVisitors,
+    s.topCountry ? countryName(s.topCountry.slice(0, 2).toUpperCase()) : '—',
+    s.topDevice ? s.topDevice.charAt(0).toUpperCase() + s.topDevice.slice(1) : '—',
+  ]);
+  const csv = [headers, ...rows]
+    .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    .join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `deep2k-report-${today}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function StatusBadge({ pageviews, lastEvent }: { pageviews: number; lastEvent: string | null }) {
   const stale = isStale(lastEvent);
   if (pageviews > 0 && !stale) {
@@ -106,6 +135,7 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
   const [filter, setFilter] = useState<FilterTab>('all');
   const [deleting, setDeleting] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [exportConfirm, setExportConfirm] = useState(false);
   const [page, setPage] = useState(1);
   const router = useRouter();
 
@@ -155,11 +185,24 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
     <div className="bg-[#0d1a14] border border-[#1a2e22] rounded-xl overflow-hidden">
       {/* Header */}
       <div className="px-5 py-4 border-b border-[#1a2e22] flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <span className="font-semibold text-sm text-white">Sites</span>
-          <span className="text-[#4a7060] font-mono text-xs ml-2">
-            {filtered.length === sites.length ? `${sites.length} sites` : `${filtered.length} of ${sites.length} shown`}
-          </span>
+        <div className="flex items-center gap-3">
+          <div>
+            <span className="font-semibold text-sm text-white">Sites</span>
+            <span className="text-[#4a7060] font-mono text-xs ml-2">
+              {filtered.length === sites.length ? `${sites.length} sites` : `${filtered.length} of ${sites.length} shown`}
+            </span>
+          </div>
+          <button
+            onClick={() => setExportConfirm(true)}
+            className="flex items-center gap-1.5 text-xs font-mono font-semibold text-black bg-emerald-400 hover:bg-emerald-300 px-3 py-1.5 rounded-lg transition-colors"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Export CSV
+          </button>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {/* Filter tabs */}
@@ -176,6 +219,7 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
               </button>
             ))}
           </div>
+
           {/* Search */}
           <div className="relative">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4a7060]" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -195,8 +239,56 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
               </button>
             )}
           </div>
+
         </div>
       </div>
+
+      {/* Export confirm modal */}
+      {exportConfirm && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+          <div className="bg-[#0d1a14] border border-[#1a2e22] rounded-2xl w-full max-w-sm">
+            <div className="flex items-start justify-between px-6 pt-6 pb-4">
+              <div>
+                <p className="text-emerald-400 text-[10px] font-bold uppercase tracking-widest mb-1.5">Export</p>
+                <h3 className="text-white font-semibold text-xl">Download report?</h3>
+              </div>
+              <button onClick={() => setExportConfirm(false)} className="text-[#6b8f7a] hover:text-white transition-colors mt-1 p-1">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <div className="px-6 pb-6 space-y-5">
+              <div className="bg-emerald-400/5 border border-emerald-400/20 rounded-xl px-4 py-3">
+                <p className="text-xs font-mono text-[#6b8f7a]">
+                  This will download a CSV of all{' '}
+                  <span className="text-white font-semibold">{sites.length} sites</span>{' '}
+                  including their status, pageviews, visitors, top country, and device.
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => { exportCSV(sites); setExportConfirm(false); }}
+                  className="flex-1 bg-emerald-400 hover:bg-emerald-300 text-black font-semibold py-2.5 rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                  Download CSV
+                </button>
+                <button
+                  onClick={() => setExportConfirm(false)}
+                  className="flex-1 bg-[#1a2e22] hover:bg-[#213d2a] border border-[#2a4a32] text-white font-semibold py-2.5 rounded-lg text-sm transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirm delete overlay */}
       {(confirmId || deleting) && (
