@@ -57,7 +57,28 @@ export async function runAggregation(db: Db, lookbackHours = 2): Promise<number>
             GROUP BY e2.device
             ORDER BY cnt DESC
           ) t
-        ) AS devices
+        ) AS devices,
+
+        -- Top 10 referrer domains by unique visitor count (excludes direct/empty)
+        (
+          SELECT jsonb_object_agg(ref_host, cnt)
+          FROM (
+            SELECT
+              regexp_replace(
+                regexp_replace(lower(e2.referrer), '^https?://(www\.)?', ''),
+                '[/?#].*$', ''
+              ) AS ref_host,
+              COUNT(DISTINCT e2.visitor_id)::int AS cnt
+            FROM events e2
+            WHERE e2.site_id = a.site_id
+              AND date_trunc('day', e2.received_at)::date = a.day
+              AND e2.referrer IS NOT NULL
+              AND e2.referrer <> ''
+            GROUP BY ref_host
+            ORDER BY cnt DESC
+            LIMIT 10
+          ) t
+        ) AS top_referrers
 
       FROM affected a
       JOIN events e
@@ -65,18 +86,20 @@ export async function runAggregation(db: Db, lookbackHours = 2): Promise<number>
         AND date_trunc('day', e.received_at)::date = a.day
       GROUP BY a.site_id, a.day
     )
-    INSERT INTO daily_stats (site_id, date, pageviews, unique_visitors, top_paths, countries, devices)
+    INSERT INTO daily_stats (site_id, date, pageviews, unique_visitors, top_paths, countries, devices, top_referrers)
     SELECT site_id, day, pageviews, unique_visitors,
       COALESCE(top_paths, '{}'),
       COALESCE(countries, '{}'),
-      COALESCE(devices, '{}')
+      COALESCE(devices, '{}'),
+      COALESCE(top_referrers, '{}')
     FROM rollup
     ON CONFLICT (site_id, date) DO UPDATE SET
       pageviews       = EXCLUDED.pageviews,
       unique_visitors = EXCLUDED.unique_visitors,
       top_paths       = EXCLUDED.top_paths,
       countries       = EXCLUDED.countries,
-      devices         = EXCLUDED.devices
+      devices         = EXCLUDED.devices,
+      top_referrers   = EXCLUDED.top_referrers
     RETURNING site_id;
   `);
   return result.rowCount ?? 0;

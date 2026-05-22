@@ -73,6 +73,7 @@ export const dailyStats = pgTable(
     countries: jsonb('countries').notNull().default({}),
     devices: jsonb('devices').notNull().default({}),
     topPaths: jsonb('top_paths').notNull().default({}),
+    topReferrers: jsonb('top_referrers').notNull().default({}),
   },
   (t) => ({
     pk: primaryKey({ columns: [t.siteId, t.date] }),

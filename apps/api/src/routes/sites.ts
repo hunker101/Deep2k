@@ -67,7 +67,7 @@ export function sitesRouter(db: Db, env: Env): Router {
       res.status(201).json({ ...row, scriptEndpoint: endpointForWorker });
     } catch (err) {
       if (isUniqueViolation(err)) {
-        res.status(409).json({ error: 'domain or diversification tuple already exists' });
+        res.status(409).json({ error: 'This domain is already being tracked.' });
         return;
       }
       throw err;

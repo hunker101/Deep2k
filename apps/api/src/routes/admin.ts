@@ -22,11 +22,22 @@ export function adminRouter(db: Db): Router {
     }
   });
 
+  // One-time migration: add top_referrers column to daily_stats
+  router.post('/admin/migrate-referrers', async (_req: Request, res: Response) => {
+    try {
+      await db.execute(sql`ALTER TABLE daily_stats ADD COLUMN IF NOT EXISTS top_referrers jsonb NOT NULL DEFAULT '{}'`);
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: String(err) });
+    }
+  });
+
   // Manually trigger the hourly aggregation. The real schedule runs every
   // hour at :05; this endpoint is for testing and ad-hoc recompute.
-  router.post('/admin/aggregate', async (_req: Request, res: Response) => {
+  router.post('/admin/aggregate', async (req: Request, res: Response) => {
     try {
-      const rows = await runAggregation(db);
+      const hours = Number(req.query.hours) || 2;
+      const rows = await runAggregation(db, hours);
       res.json({ ok: true, rows_upserted: rows });
     } catch (err) {
       res.status(500).json({ ok: false, error: String(err) });

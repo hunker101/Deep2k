@@ -45,12 +45,17 @@ export default async function SitePage({
     for (const [k, v] of Object.entries(r.topPaths ?? {})) acc[k] = (acc[k] ?? 0) + v;
     return acc;
   }, {});
+  const referrerCounts = stats.reduce<Record<string, number>>((acc, r) => {
+    for (const [k, v] of Object.entries(r.topReferrers ?? {})) acc[k] = (acc[k] ?? 0) + v;
+    return acc;
+  }, {});
 
   const topCountry = Object.entries(countryCounts).sort((a, b) => b[1] - a[1])[0];
   const topDevice = Object.entries(deviceCounts).sort((a, b) => b[1] - a[1])[0];
 
   const topPages = Object.entries(pathCounts).sort((a, b) => b[1] - a[1]).slice(0, 6);
   const topCountries = Object.entries(countryCounts).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  const topReferrers = Object.entries(referrerCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
   const deviceList = Object.entries(deviceCounts).sort((a, b) => b[1] - a[1]);
   const totalDevices = deviceList.reduce((s, [, v]) => s + v, 0);
 
@@ -193,6 +198,15 @@ export default async function SitePage({
           <Panel title="Top countries" count={topCountries.length}>
             {topCountries.length === 0 ? <EmptyPanel /> : topCountries.map(([country, count]) => (
               <CountryRankRow key={country} country={country} count={count} total={totalVisitors} />
+            ))}
+          </Panel>
+        </div>
+
+        {/* Top referrers / Device breakdown */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Panel title="Top referrers" count={topReferrers.length} subtitle="Referring domains · direct traffic excluded">
+            {topReferrers.length === 0 ? <EmptyPanel /> : topReferrers.map(([ref, count]) => (
+              <ReferrerRow key={ref} referrer={ref} count={count} total={totalVisitors} />
             ))}
           </Panel>
 
@@ -346,14 +360,31 @@ function StatCard({ label, value, sub }: { label: string; value: string; sub?: s
   );
 }
 
-function Panel({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
+function Panel({ title, count, subtitle, children }: { title: string; count: number; subtitle?: string; children: React.ReactNode }) {
   return (
     <div className="bg-[var(--c-card)] border border-[var(--c-border)] rounded-xl overflow-hidden">
       <div className="px-5 py-4 border-b border-[var(--c-border)]">
         <h3 className="text-sm font-semibold text-[var(--c-text)]">{title}</h3>
-        <p className="text-xs text-[var(--c-text-2)] font-mono mt-0.5">{count} tracked</p>
+        <p className="text-xs text-[var(--c-text-2)] font-mono mt-0.5">{subtitle ?? `${count} tracked`}</p>
       </div>
       <div className="divide-y divide-[var(--c-border)]">{children}</div>
+    </div>
+  );
+}
+
+function ReferrerRow({ referrer, count, total }: { referrer: string; count: number; total: number }) {
+  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+  return (
+    <div className="px-5 py-2.5 flex items-center justify-between gap-3 relative">
+      <div className="absolute inset-0 bg-sky-400/5" style={{ width: `${pct}%` }} />
+      <span className="flex items-center gap-2 relative z-10 min-w-0">
+        <svg className="flex-shrink-0 text-[var(--c-text-3)]" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+        </svg>
+        <span className="text-xs font-mono text-[var(--c-text-2)] truncate">{referrer}</span>
+      </span>
+      <span className="text-xs font-mono text-[var(--c-text)] relative z-10 tabular-nums flex-shrink-0">{count.toLocaleString()}</span>
     </div>
   );
 }
