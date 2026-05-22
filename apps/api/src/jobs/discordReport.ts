@@ -64,6 +64,15 @@ export async function sendDiscordReport(db: Db): Promise<void> {
   const devices = devicesResult.rows as unknown as DeviceRow[];
   const totalDevices = devices.reduce((s, d) => s + Number(d.cnt), 0);
 
+  // Script rotation reminder
+  const rotationResult = await db.execute(sql`
+    SELECT value FROM app_settings WHERE key = 'scripts_last_rotated_at'
+  `);
+  const lastRotatedRow = rotationResult.rows[0] as { value: string } | undefined;
+  const daysSinceRotation = lastRotatedRow
+    ? Math.floor((Date.now() - new Date(lastRotatedRow.value).getTime()) / (1000 * 60 * 60 * 24))
+    : null;
+
   // Sites that had events before but went silent in the last 24h (possible WAF block)
   const silentResult = await db.execute(sql`
     SELECT s.domain
@@ -141,6 +150,19 @@ export async function sendDiscordReport(db: Db): Promise<void> {
         ...(silentSites.length > 0 ? [{
           name: '⚠️ Silent Sites (0 events in 24h)',
           value: silentSites.map(s => `\`${s.domain}\``).join('\n'),
+          inline: false,
+        }] : []),
+        ...(daysSinceRotation === null ? [{
+          name: '🔄 Script Rotation',
+          value: 'Scripts have never been rotated. Run `/admin/rotate-scripts` to initialize rotation tracking.',
+          inline: false,
+        }] : daysSinceRotation >= 180 ? [{
+          name: '🚨 Script Rotation Overdue',
+          value: `Last rotated **${daysSinceRotation} days ago**. Run \`/admin/rotate-scripts\` now, then re-inject scripts on all stores.`,
+          inline: false,
+        }] : daysSinceRotation >= 150 ? [{
+          name: '🔄 Script Rotation Due Soon',
+          value: `Last rotated **${daysSinceRotation} days ago** (rotate every 180 days). Coming up in ~${180 - daysSinceRotation} days.`,
           inline: false,
         }] : []),
       ],

@@ -1,10 +1,12 @@
 import { Router, type Request, type Response } from 'express';
 import type { Db } from '@deep2k/db';
 import { sites } from '@deep2k/db';
+import { eq, sql } from 'drizzle-orm';
 import { runAggregation } from '../jobs/aggregate.js';
 import { flush } from '../queues/index.js';
 import { sendDiscordReport } from '../jobs/discordReport.js';
 import { pushSiteToKV } from '../lib/cloudflare.js';
+import { generateVariableSeed, pickBeaconMethod, pickInitDelayMs } from '@deep2k/tracker-generator';
 
 export function adminRouter(db: Db): Router {
   const router = Router();
@@ -64,6 +66,44 @@ export function adminRouter(db: Db): Router {
         }
       }));
       res.json({ ok: true, synced: results.length, results });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: String(err) });
+    }
+  });
+
+  // Rotate obfuscation fields (variable names, beacon method, timing) for all sites.
+  // Endpoint paths stay the same so existing Shopify injections keep working.
+  // After running this, re-inject the new script from the dashboard on each store.
+  router.post('/admin/rotate-scripts', async (_req: Request, res: Response) => {
+    try {
+      const rows = await db.select().from(sites);
+      const results: { domain: string; status: string }[] = [];
+      await Promise.all(rows.map(async (row) => {
+        try {
+          await db.update(sites)
+            .set({
+              variableSeed: generateVariableSeed(),
+              beaconMethod: pickBeaconMethod(),
+              initDelayMs: pickInitDelayMs(),
+            })
+            .where(eq(sites.id, row.id));
+          results.push({ domain: row.domain, status: 'rotated' });
+        } catch (err) {
+          results.push({ domain: row.domain, status: `error: ${String(err)}` });
+        }
+      }));
+      await db.execute(sql`
+        INSERT INTO app_settings (key, value, updated_at)
+        VALUES ('scripts_last_rotated_at', now()::text, now())
+        ON CONFLICT (key) DO UPDATE SET value = now()::text, updated_at = now()
+      `);
+
+      res.json({
+        ok: true,
+        rotated: results.length,
+        results,
+        note: 'Re-inject the tracker script from the dashboard on each store.',
+      });
     } catch (err) {
       res.status(500).json({ ok: false, error: String(err) });
     }

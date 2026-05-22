@@ -35,3 +35,4 @@ export function generateSiteConfig(domain: string): NewSiteConfig {
 
 export { generateScript } from './obfuscate.js';
 export type { ScriptInputs } from './obfuscate.js';
+export { generateVariableSeed, pickBeaconMethod, pickInitDelayMs } from './pools.js';
