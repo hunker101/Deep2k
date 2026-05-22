@@ -74,6 +74,7 @@ export const dailyStats = pgTable(
     devices: jsonb('devices').notNull().default({}),
     topPaths: jsonb('top_paths').notNull().default({}),
     topReferrers: jsonb('top_referrers').notNull().default({}),
+    bouncedVisitors: integer('bounced_visitors').notNull().default(0),
   },
   (t) => ({
     pk: primaryKey({ columns: [t.siteId, t.date] }),

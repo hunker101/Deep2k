@@ -12,6 +12,7 @@ import { runAggregation } from './jobs/aggregate.js';
 import { rotateDailySalt } from './jobs/rotateSalt.js';
 import { sendDiscordReport } from './jobs/discordReport.js';
 import { createPartitions } from './jobs/createPartitions.js';
+import { pruneOldEvents } from './jobs/pruneEvents.js';
 import { MAX_PAYLOAD_BYTES } from '@deep2k/shared';
 
 const env = loadEnv();
@@ -68,6 +69,17 @@ const partitionTask = cron.schedule('0 12 25 * *', async () => {
 // Also create partitions on startup so a fresh deploy is always ahead.
 createPartitions(db, 3).catch(err => console.error('[startup] partition creation failed:', err));
 
+// Nightly event pruning at 2am UTC — deletes raw events older than 90 days.
+const pruneTask = cron.schedule('0 2 * * *', async () => {
+  console.log('[cron] event pruning starting');
+  try {
+    const deleted = await pruneOldEvents(db, 90);
+    console.log(`[cron] event pruning done, ${deleted} rows deleted`);
+  } catch (err) {
+    console.error('[cron] event pruning failed:', err);
+  }
+});
+
 // Daily salt rotation at midnight.
 const saltRotationTask = cron.schedule('0 0 * * *', async () => {
   console.log('[cron] salt rotation starting');
@@ -92,6 +104,7 @@ async function shutdown(signal: string): Promise<void> {
   saltRotationTask.stop();
   discordReportTask.stop();
   partitionTask.stop();
+  pruneTask.stop();
   await flush();
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(0), 5000).unref();

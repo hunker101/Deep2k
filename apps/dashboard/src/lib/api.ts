@@ -27,6 +27,7 @@ export interface DailyStatRow {
   countries: Record<string, number>;
   devices: Record<string, number>;
   topReferrers: Record<string, number>;
+  bouncedVisitors: number;
 }
 
 export interface DailyPoint {

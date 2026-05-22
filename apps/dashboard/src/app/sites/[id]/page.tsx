@@ -50,6 +50,10 @@ export default async function SitePage({
     return acc;
   }, {});
 
+  const totalBounced = stats.reduce((a, r) => a + (r.bouncedVisitors ?? 0), 0);
+  const bounceRate = totalVisitors > 0 ? Math.round((totalBounced / totalVisitors) * 100) : null;
+  const pagesPerSession = totalVisitors > 0 ? (totalPageviews / totalVisitors).toFixed(1) : null;
+
   const topCountry = Object.entries(countryCounts).sort((a, b) => b[1] - a[1])[0];
   const topDevice = Object.entries(deviceCounts).sort((a, b) => b[1] - a[1])[0];
 
@@ -157,7 +161,7 @@ export default async function SitePage({
         </div>
 
         {/* Stat cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
           <StatCard label="Pageviews" value={totalPageviews.toLocaleString()} />
           <StatCard label="Unique visitors" value={totalVisitors.toLocaleString()} />
           <StatCard
@@ -169,6 +173,16 @@ export default async function SitePage({
             label="Top device"
             value={topDevice ? cap(topDevice[0]) : '—'}
             sub={topDevice ? `${Math.round((topDevice[1] / (totalDevices || 1)) * 100)}% of sessions` : 'no data yet'}
+          />
+          <StatCard
+            label="Bounce rate"
+            value={bounceRate !== null ? `${bounceRate}%` : '—'}
+            sub="Visitors who viewed 1 page"
+          />
+          <StatCard
+            label="Pages / session"
+            value={pagesPerSession !== null ? pagesPerSession : '—'}
+            sub="Avg pages per visitor"
           />
         </div>
 

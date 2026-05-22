@@ -59,6 +59,19 @@ export async function runAggregation(db: Db, lookbackHours = 2): Promise<number>
           ) t
         ) AS devices,
 
+        -- Visitors who viewed only 1 page (bounced)
+        (
+          SELECT COUNT(*)::int
+          FROM (
+            SELECT e2.visitor_id
+            FROM events e2
+            WHERE e2.site_id = a.site_id
+              AND date_trunc('day', e2.received_at)::date = a.day
+            GROUP BY e2.visitor_id
+            HAVING COUNT(*) = 1
+          ) b
+        ) AS bounced_visitors,
+
         -- Top 10 referrer domains by unique visitor count (excludes direct/empty)
         (
           SELECT jsonb_object_agg(ref_host, cnt)
@@ -86,20 +99,22 @@ export async function runAggregation(db: Db, lookbackHours = 2): Promise<number>
         AND date_trunc('day', e.received_at)::date = a.day
       GROUP BY a.site_id, a.day
     )
-    INSERT INTO daily_stats (site_id, date, pageviews, unique_visitors, top_paths, countries, devices, top_referrers)
+    INSERT INTO daily_stats (site_id, date, pageviews, unique_visitors, top_paths, countries, devices, top_referrers, bounced_visitors)
     SELECT site_id, day, pageviews, unique_visitors,
       COALESCE(top_paths, '{}'),
       COALESCE(countries, '{}'),
       COALESCE(devices, '{}'),
-      COALESCE(top_referrers, '{}')
+      COALESCE(top_referrers, '{}'),
+      COALESCE(bounced_visitors, 0)
     FROM rollup
     ON CONFLICT (site_id, date) DO UPDATE SET
-      pageviews       = EXCLUDED.pageviews,
-      unique_visitors = EXCLUDED.unique_visitors,
-      top_paths       = EXCLUDED.top_paths,
-      countries       = EXCLUDED.countries,
-      devices         = EXCLUDED.devices,
-      top_referrers   = EXCLUDED.top_referrers
+      pageviews         = EXCLUDED.pageviews,
+      unique_visitors   = EXCLUDED.unique_visitors,
+      top_paths         = EXCLUDED.top_paths,
+      countries         = EXCLUDED.countries,
+      devices           = EXCLUDED.devices,
+      top_referrers     = EXCLUDED.top_referrers,
+      bounced_visitors  = EXCLUDED.bounced_visitors
     RETURNING site_id;
   `);
   return result.rowCount ?? 0;

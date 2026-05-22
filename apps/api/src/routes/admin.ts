@@ -42,6 +42,16 @@ export function adminRouter(db: Db): Router {
     }
   });
 
+  // One-time migration: add bounced_visitors column to daily_stats
+  router.post('/admin/migrate-bounce', async (_req: Request, res: Response) => {
+    try {
+      await db.execute(sql`ALTER TABLE daily_stats ADD COLUMN IF NOT EXISTS bounced_visitors integer NOT NULL DEFAULT 0`);
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: String(err) });
+    }
+  });
+
   // Manually trigger the hourly aggregation. The real schedule runs every
   // hour at :05; this endpoint is for testing and ad-hoc recompute.
   router.post('/admin/aggregate', async (req: Request, res: Response) => {
