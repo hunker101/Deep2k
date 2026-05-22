@@ -3,6 +3,7 @@ import type { Db } from '@deep2k/db';
 import { sites } from '@deep2k/db';
 import { eq, sql } from 'drizzle-orm';
 import { runAggregation } from '../jobs/aggregate.js';
+import { createPartitions } from '../jobs/createPartitions.js';
 import { flush } from '../queues/index.js';
 import { sendDiscordReport } from '../jobs/discordReport.js';
 import { pushSiteToKV } from '../lib/cloudflare.js';
@@ -17,6 +18,15 @@ export function adminRouter(db: Db): Router {
     try {
       await flush();
       res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: String(err) });
+    }
+  });
+
+  router.post('/admin/create-partitions', async (_req: Request, res: Response) => {
+    try {
+      const results = await createPartitions(db, 3);
+      res.json({ ok: true, results });
     } catch (err) {
       res.status(500).json({ ok: false, error: String(err) });
     }

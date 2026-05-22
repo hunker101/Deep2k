@@ -11,6 +11,7 @@ import { initQueue, flush } from './queues/index.js';
 import { runAggregation } from './jobs/aggregate.js';
 import { rotateDailySalt } from './jobs/rotateSalt.js';
 import { sendDiscordReport } from './jobs/discordReport.js';
+import { createPartitions } from './jobs/createPartitions.js';
 import { MAX_PAYLOAD_BYTES } from '@deep2k/shared';
 
 const env = loadEnv();
@@ -53,6 +54,20 @@ const discordReportTask = cron.schedule('0 8 * * *', async () => {
   }
 });
 
+// Monthly partition creation on the 25th at noon UTC — creates current + next 3 months.
+const partitionTask = cron.schedule('0 12 25 * *', async () => {
+  console.log('[cron] partition creation starting');
+  try {
+    const results = await createPartitions(db, 3);
+    console.log('[cron] partition creation done:', results);
+  } catch (err) {
+    console.error('[cron] partition creation failed:', err);
+  }
+});
+
+// Also create partitions on startup so a fresh deploy is always ahead.
+createPartitions(db, 3).catch(err => console.error('[startup] partition creation failed:', err));
+
 // Daily salt rotation at midnight.
 const saltRotationTask = cron.schedule('0 0 * * *', async () => {
   console.log('[cron] salt rotation starting');
@@ -76,6 +91,7 @@ async function shutdown(signal: string): Promise<void> {
   aggregationTask.stop();
   saltRotationTask.stop();
   discordReportTask.stop();
+  partitionTask.stop();
   await flush();
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(0), 5000).unref();
