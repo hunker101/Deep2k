@@ -71,6 +71,20 @@ export function adminRouter(db: Db): Router {
     }
   });
 
+  router.get('/admin/rotation-status', async (_req: Request, res: Response) => {
+    try {
+      const result = await db.execute(sql`
+        SELECT value FROM app_settings WHERE key = 'scripts_last_rotated_at'
+      `);
+      const row = result.rows[0] as { value: string } | undefined;
+      if (!row) { res.json({ lastRotatedAt: null, daysSince: null }); return; }
+      const daysSince = Math.floor((Date.now() - new Date(row.value).getTime()) / (1000 * 60 * 60 * 24));
+      res.json({ lastRotatedAt: row.value, daysSince });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: String(err) });
+    }
+  });
+
   // Rotate obfuscation fields (variable names, beacon method, timing) for all sites.
   // Endpoint paths stay the same so existing Shopify injections keep working.
   // After running this, re-inject the new script from the dashboard on each store.

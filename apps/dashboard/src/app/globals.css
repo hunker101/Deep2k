@@ -3,7 +3,39 @@
 @tailwind utilities;
 
 @layer base {
-  * {
-    box-sizing: border-box;
+  * { box-sizing: border-box; }
+
+  :root {
+    --c-bg:             #f4faf7;
+    --c-card:           #ffffff;
+    --c-hover:          #f0f8f4;
+    --c-deep:           #eaf5ef;
+    --c-subtle:         #e0efea;
+    --c-subtle-hover:   #d0e8dd;
+    --c-border:         #cce5d8;
+    --c-border-strong:  #a8d4bf;
+    --c-text:           #0a1f14;
+    --c-text-2:         #3d6b51;
+    --c-text-3:         #5a8870;
+    --c-placeholder:    #8db8a0;
+    --c-divider:        #e8f4ed;
+    --c-header-bg:      rgba(244,250,247,0.85);
+  }
+
+  .dark {
+    --c-bg:             #080f0c;
+    --c-card:           #0d1a14;
+    --c-hover:          #0f2018;
+    --c-deep:           #060c09;
+    --c-subtle:         #1a2e22;
+    --c-subtle-hover:   #213d2a;
+    --c-border:         #1a2e22;
+    --c-border-strong:  #2a4a32;
+    --c-text:           #ffffff;
+    --c-text-2:         #6b8f7a;
+    --c-text-3:         #4a7060;
+    --c-placeholder:    #3a5244;
+    --c-divider:        #0f2018;
+    --c-header-bg:      rgba(8,15,12,0.85);
   }
 }

@@ -3,6 +3,7 @@ import { fetchSiteStats, fetchLastEvent, fetchSites } from '@/lib/api';
 import { TrafficChart } from '@/components/TrafficChart';
 import { CopyButton } from '@/components/CopyButton';
 import { GetScriptButton } from '@/components/GetScriptModal';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import type { DailyStatRow, SiteRow } from '@/lib/api';
 
 const PERIODS = [
@@ -32,7 +33,6 @@ export default async function SitePage({
   const totalPageviews = stats.reduce((a, r) => a + r.pageviews, 0);
   const totalVisitors = stats.reduce((a, r) => a + r.uniqueVisitors, 0);
 
-  // Derive top country / device from aggregated JSONB
   const countryCounts = stats.reduce<Record<string, number>>((acc, r) => {
     for (const [k, v] of Object.entries(r.countries ?? {})) acc[k] = (acc[k] ?? 0) + v;
     return acc;
@@ -65,17 +65,30 @@ export default async function SitePage({
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
   return (
-    <div className="min-h-screen bg-[#080f0c]">
+    <div className="min-h-screen bg-[var(--c-bg)]">
       {/* Nav */}
-      <header className="border-b border-[#1a2e22] px-6 py-3 flex items-center justify-between">
+      <header className="border-b border-[var(--c-border)] px-6 py-3 flex items-center justify-between sticky top-0 z-30" style={{ backgroundColor: 'var(--c-header-bg)', backdropFilter: 'blur(8px)' }}>
         <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
           </svg>
-          <span className="text-white font-semibold">Deep<span className="text-emerald-400">2K</span></span>
+          <span className="text-[var(--c-text)] font-semibold">Deep<span className="text-emerald-400">2K</span></span>
         </Link>
-        <span className="text-[#6b8f7a] text-sm font-mono hidden sm:block">{today}</span>
-        <a href="/api/logout" className="text-[#6b8f7a] hover:text-white text-xs font-mono px-2 py-1.5 transition-colors">Sign out</a>
+        <div className="flex items-center gap-3">
+          <span className="text-[var(--c-text-3)] text-xs font-mono hidden sm:block">{today}</span>
+          <ThemeToggle />
+          <a
+            href="/api/logout"
+            className="flex items-center gap-1.5 text-[var(--c-text-2)] hover:text-red-400 border border-transparent hover:border-red-400/20 hover:bg-red-400/5 text-xs font-mono px-3 py-1.5 rounded-lg transition-all"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            Sign out
+          </a>
+        </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
@@ -84,16 +97,16 @@ export default async function SitePage({
           <div>
             <Link
               href="/"
-              className="inline-flex items-center gap-2 text-base font-medium text-emerald-400 hover:text-white bg-[#1a2e22] hover:bg-[#213d2a] border border-[#2a4a32] px-4 py-2 rounded-lg transition-all mb-3"
+              className="inline-flex items-center gap-2 text-base font-medium text-emerald-400 hover:text-[var(--c-text)] bg-[var(--c-subtle)] hover:bg-[var(--c-subtle-hover)] border border-[var(--c-border-strong)] px-4 py-2 rounded-lg transition-all mb-3"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M19 12H5M12 5l-7 7 7 7"/>
               </svg>
               Back to all sites
             </Link>
-            <p className="text-xs font-mono text-[#6b8f7a] mb-1">SITES / {site?.domain.toUpperCase() ?? id.toUpperCase()}</p>
+            <p className="text-xs font-mono text-[var(--c-text-2)] mb-1">SITES / {site?.domain.toUpperCase() ?? id.toUpperCase()}</p>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold">{site?.domain ?? id}</h1>
+              <h1 className="text-2xl font-bold text-[var(--c-text)]">{site?.domain ?? id}</h1>
               {(() => {
                 const stale = !lastEvent || Date.now() - new Date(lastEvent).getTime() > 24 * 60 * 60 * 1000;
                 if (totalPageviews > 0 && !stale) return (
@@ -107,13 +120,13 @@ export default async function SitePage({
                   </span>
                 );
                 return (
-                  <span className="inline-flex items-center gap-1.5 bg-[#1a2e22] text-[#4a7060] border border-[#1a2e22] text-xs font-mono px-2 py-0.5 rounded-full">
-                    <span className="w-1 h-1 rounded-full bg-[#4a7060]"/>Inactive
+                  <span className="inline-flex items-center gap-1.5 bg-[var(--c-subtle)] text-[var(--c-text-3)] border border-[var(--c-border)] text-xs font-mono px-2 py-0.5 rounded-full">
+                    <span className="w-1 h-1 rounded-full bg-[var(--c-text-3)]"/>Inactive
                   </span>
                 );
               })()}
             </div>
-            <p className="text-xs font-mono text-[#6b8f7a] mt-1 flex items-center gap-2 flex-wrap">
+            <p className="text-xs font-mono text-[var(--c-text-2)] mt-1 flex items-center gap-2 flex-wrap">
               <span>Last event {lastEventLabel}</span>
               {site && <><span>·</span><span>beacon: {site.beaconMethod}</span></>}
               {site && (
@@ -155,15 +168,15 @@ export default async function SitePage({
         </div>
 
         {/* Traffic chart */}
-        <div className="bg-[#0d1a14] border border-[#1a2e22] rounded-xl p-5">
+        <div className="bg-[var(--c-card)] border border-[var(--c-border)] rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-sm font-semibold">Visitors &amp; pageviews</h2>
-              <p className="text-xs text-[#6b8f7a] font-mono mt-0.5">Daily totals · {period === '7d' ? '7 days' : period === '30d' ? '30 days' : period}</p>
+              <h2 className="text-sm font-semibold text-[var(--c-text)]">Visitors &amp; pageviews</h2>
+              <p className="text-xs text-[var(--c-text-2)] font-mono mt-0.5">Daily totals · {period === '7d' ? '7 days' : period === '30d' ? '30 days' : period}</p>
             </div>
           </div>
           {chartData.length === 0 ? (
-            <div className="h-40 flex items-center justify-center text-[#6b8f7a] text-sm font-mono">No data for this period</div>
+            <div className="h-40 flex items-center justify-center text-[var(--c-text-2)] text-sm font-mono">No data for this period</div>
           ) : (
             <TrafficChart data={chartData} totalVisitors={totalVisitors} totalPageviews={totalPageviews} />
           )}
@@ -183,10 +196,10 @@ export default async function SitePage({
             ))}
           </Panel>
 
-          <div className="bg-[#0d1a14] border border-[#1a2e22] rounded-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-[#1a2e22]">
-              <h3 className="text-sm font-semibold">Device breakdown</h3>
-              <p className="text-xs text-[#6b8f7a] font-mono mt-0.5">Share of sessions over selected range</p>
+          <div className="bg-[var(--c-card)] border border-[var(--c-border)] rounded-xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-[var(--c-border)]">
+              <h3 className="text-sm font-semibold text-[var(--c-text)]">Device breakdown</h3>
+              <p className="text-xs text-[var(--c-text-2)] font-mono mt-0.5">Share of sessions over selected range</p>
             </div>
             <div className="p-5">
               {deviceList.length === 0 ? (
@@ -207,9 +220,9 @@ export default async function SitePage({
                       <div key={d} className="flex items-center justify-between text-xs font-mono">
                         <span className={`flex items-center gap-2 ${deviceColor(d).replace('bg-', 'text-')}`}>
                           <DeviceIcon device={d} />
-                          <span className="text-white">{cap(d)}</span>
+                          <span className="text-[var(--c-text)]">{cap(d)}</span>
                         </span>
-                        <span className="text-[#6b8f7a]">{Math.round((v / totalDevices) * 100)}%</span>
+                        <span className="text-[var(--c-text-2)]">{Math.round((v / totalDevices) * 100)}%</span>
                       </div>
                     ))}
                   </div>
@@ -220,16 +233,16 @@ export default async function SitePage({
         </div>
 
         {/* Beacon & worker config */}
-        <div className="bg-[#0d1a14] border border-[#1a2e22] rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-[#1a2e22] flex items-center justify-between">
+        <div className="bg-[var(--c-card)] border border-[var(--c-border)] rounded-xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-[var(--c-border)] flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-semibold">Beacon &amp; worker</h3>
-              <p className="text-xs text-[#6b8f7a] font-mono mt-0.5">Deployed configuration for this property</p>
+              <h3 className="text-sm font-semibold text-[var(--c-text)]">Beacon &amp; worker</h3>
+              <p className="text-xs text-[var(--c-text-2)] font-mono mt-0.5">Deployed configuration for this property</p>
             </div>
             {site && <GetScriptButton siteId={site.id} />}
           </div>
           {site ? (
-            <div className="divide-y divide-[#1a2e22]">
+            <div className="divide-y divide-[var(--c-border)]">
               <ConfigRow label="Script path" value={site.scriptPath} mono copy />
               <ConfigRow label="Endpoint path" value={site.endpointPath} mono copy />
               <ConfigRow label="Beacon method" value={`POST · navigator.${site.beaconMethod}`} mono />
@@ -242,7 +255,7 @@ export default async function SitePage({
               <ConfigRow label="Last event received" value={lastEventLabel} mono />
             </div>
           ) : (
-            <div className="p-6 text-xs font-mono text-[#6b8f7a]">Site not found</div>
+            <div className="p-6 text-xs font-mono text-[var(--c-text-2)]">Site not found</div>
           )}
         </div>
       </main>
@@ -307,13 +320,13 @@ function relativeTime(d: Date): string {
 
 function PeriodTabs({ current, id }: { current: string; id: string }) {
   return (
-    <div className="flex items-center gap-1 bg-[#0d1a14] border border-[#1a2e22] rounded-lg p-1">
+    <div className="flex items-center gap-1 bg-[var(--c-card)] border border-[var(--c-border)] rounded-lg p-1">
       {PERIODS.map(p => (
         <Link
           key={p.key}
           href={`/sites/${id}?period=${p.key}`}
           className={`px-3 py-1.5 rounded-md text-xs font-mono transition-colors ${
-            current === p.key ? 'bg-[#1a2e22] text-white' : 'text-[#6b8f7a] hover:text-white'
+            current === p.key ? 'bg-[var(--c-subtle)] text-[var(--c-text)]' : 'text-[var(--c-text-2)] hover:text-[var(--c-text)]'
           }`}
         >
           {p.label}
@@ -325,22 +338,22 @@ function PeriodTabs({ current, id }: { current: string; id: string }) {
 
 function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="bg-[#0d1a14] border border-[#1a2e22] rounded-xl p-5">
-      <p className="text-xs font-mono text-[#6b8f7a] uppercase tracking-wide mb-2">{label}</p>
-      <p className="text-3xl font-bold tabular-nums">{value}</p>
-      {sub && <p className="text-xs font-mono text-[#6b8f7a] mt-1">{sub}</p>}
+    <div className="bg-[var(--c-card)] border border-[var(--c-border)] rounded-xl p-5">
+      <p className="text-xs font-mono text-[var(--c-text-2)] uppercase tracking-wide mb-2">{label}</p>
+      <p className="text-3xl font-bold tabular-nums text-[var(--c-text)]">{value}</p>
+      {sub && <p className="text-xs font-mono text-[var(--c-text-2)] mt-1">{sub}</p>}
     </div>
   );
 }
 
 function Panel({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
   return (
-    <div className="bg-[#0d1a14] border border-[#1a2e22] rounded-xl overflow-hidden">
-      <div className="px-5 py-4 border-b border-[#1a2e22]">
-        <h3 className="text-sm font-semibold">{title}</h3>
-        <p className="text-xs text-[#6b8f7a] font-mono mt-0.5">{count} tracked</p>
+    <div className="bg-[var(--c-card)] border border-[var(--c-border)] rounded-xl overflow-hidden">
+      <div className="px-5 py-4 border-b border-[var(--c-border)]">
+        <h3 className="text-sm font-semibold text-[var(--c-text)]">{title}</h3>
+        <p className="text-xs text-[var(--c-text-2)] font-mono mt-0.5">{count} tracked</p>
       </div>
-      <div className="divide-y divide-[#1a2e22]">{children}</div>
+      <div className="divide-y divide-[var(--c-border)]">{children}</div>
     </div>
   );
 }
@@ -350,8 +363,8 @@ function RankRow({ label, count, total }: { label: string; count: number; total:
   return (
     <div className="px-5 py-2.5 flex items-center justify-between gap-3 relative">
       <div className="absolute inset-0 bg-emerald-400/5" style={{ width: `${pct}%` }} />
-      <span className="text-xs font-mono text-[#6b8f7a] relative z-10 break-all">/ {label.replace(/^\//, '')}</span>
-      <span className="text-xs font-mono text-white relative z-10 tabular-nums flex-shrink-0">{count.toLocaleString()}</span>
+      <span className="text-xs font-mono text-[var(--c-text-2)] relative z-10 break-all">/ {label.replace(/^\//, '')}</span>
+      <span className="text-xs font-mono text-[var(--c-text)] relative z-10 tabular-nums flex-shrink-0">{count.toLocaleString()}</span>
     </div>
   );
 }
@@ -364,10 +377,10 @@ function CountryRankRow({ country, count, total }: { country: string; count: num
     <div className="px-5 py-2.5 flex items-center justify-between gap-3 relative">
       <div className="absolute inset-0 bg-emerald-400/5" style={{ width: `${pct}%` }} />
       <span className="flex items-center gap-2 relative z-10">
-        <span className="text-[#4a7060] text-[10px] font-bold bg-[#0d1a14] border border-[#1a2e22] px-1.5 py-0.5 rounded flex-shrink-0">{code}</span>
-        <span className="text-xs font-mono text-white">{name}</span>
+        <span className="text-[var(--c-text-3)] text-[10px] font-bold bg-[var(--c-card)] border border-[var(--c-border)] px-1.5 py-0.5 rounded flex-shrink-0">{code}</span>
+        <span className="text-xs font-mono text-[var(--c-text)]">{name}</span>
       </span>
-      <span className="text-xs font-mono text-white relative z-10 tabular-nums flex-shrink-0">{count.toLocaleString()}</span>
+      <span className="text-xs font-mono text-[var(--c-text)] relative z-10 tabular-nums flex-shrink-0">{count.toLocaleString()}</span>
     </div>
   );
 }
@@ -375,9 +388,9 @@ function CountryRankRow({ country, count, total }: { country: string; count: num
 function ConfigRow({ label, value, mono, copy, children }: { label: string; value?: string; mono?: boolean; copy?: boolean; children?: React.ReactNode }) {
   return (
     <div className="px-5 py-3.5 flex items-center justify-between gap-4">
-      <span className="text-xs font-mono text-[#6b8f7a] w-40 flex-shrink-0">{label}</span>
+      <span className="text-xs font-mono text-[var(--c-text-2)] w-40 flex-shrink-0">{label}</span>
       {children ?? (
-        <span className={`text-sm ${mono ? 'font-mono text-white' : 'text-white'} flex items-center gap-2`}>
+        <span className={`text-sm ${mono ? 'font-mono text-[var(--c-text)]' : 'text-[var(--c-text)]'} flex items-center gap-2`}>
           {value}
           {copy && value && (
             <CopyButton text={value} />
@@ -390,7 +403,7 @@ function ConfigRow({ label, value, mono, copy, children }: { label: string; valu
 
 function EmptyPanel() {
   return (
-    <div className="px-5 py-6 text-center text-xs font-mono text-[#6b8f7a]">
+    <div className="px-5 py-6 text-center text-xs font-mono text-[var(--c-text-2)]">
       No data yet — runs after next aggregation
     </div>
   );

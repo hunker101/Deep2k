@@ -26,9 +26,9 @@ function countryName(code: string): string {
 }
 
 function DeviceIcon({ device }: { device: string | null }) {
-  if (!device) return <span className="text-[#4a7060]">—</span>;
+  if (!device) return <span className="text-[var(--c-text-3)]">—</span>;
   if (device === 'mobile') return (
-    <span className="flex items-center gap-1.5 text-[#6b8f7a] text-xs font-mono">
+    <span className="flex items-center gap-1.5 text-[var(--c-text-2)] text-xs font-mono">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>
       </svg>
@@ -36,7 +36,7 @@ function DeviceIcon({ device }: { device: string | null }) {
     </span>
   );
   if (device === 'tablet') return (
-    <span className="flex items-center gap-1.5 text-[#6b8f7a] text-xs font-mono">
+    <span className="flex items-center gap-1.5 text-[var(--c-text-2)] text-xs font-mono">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>
       </svg>
@@ -44,7 +44,7 @@ function DeviceIcon({ device }: { device: string | null }) {
     </span>
   );
   return (
-    <span className="flex items-center gap-1.5 text-[#6b8f7a] text-xs font-mono">
+    <span className="flex items-center gap-1.5 text-[var(--c-text-2)] text-xs font-mono">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
         <line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
@@ -107,20 +107,20 @@ function StatusBadge({ pageviews, lastEvent }: { pageviews: number; lastEvent: s
     );
   }
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-full border bg-[#1a2e22] text-[#4a7060] border-[#1a2e22]">
-      <span className="w-1.5 h-1.5 rounded-full bg-[#4a7060]" />
+    <span className="inline-flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-full border bg-[var(--c-subtle)] text-[var(--c-text-3)] border-[var(--c-border)]">
+      <span className="w-1.5 h-1.5 rounded-full bg-[var(--c-text-3)]" />
       Inactive
     </span>
   );
 }
 
 function CountryBadge({ country }: { country: string | null }) {
-  if (!country) return <span className="text-[#4a7060]">—</span>;
+  if (!country) return <span className="text-[var(--c-text-3)]">—</span>;
   const code = country.slice(0, 2).toUpperCase();
   const name = countryName(code);
   return (
-    <span className="flex items-center gap-1.5 text-white text-xs font-mono">
-      <span className="text-[#4a7060] text-[10px] font-bold bg-[#0d1a14] border border-[#1a2e22] px-1.5 py-0.5 rounded flex-shrink-0">
+    <span className="flex items-center gap-1.5 text-[var(--c-text)] text-xs font-mono">
+      <span className="text-[var(--c-text-3)] text-[10px] font-bold bg-[var(--c-card)] border border-[var(--c-border)] px-1.5 py-0.5 rounded flex-shrink-0">
         {code}
       </span>
       <span className="truncate max-w-[100px]" title={name}>{name}</span>
@@ -177,18 +177,18 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
   }
 
   function SortIcon({ k }: { k: SortKey }) {
-    if (sortKey !== k) return <span className="text-[#2a4a32] ml-1">↕</span>;
+    if (sortKey !== k) return <span className="text-[var(--c-border-strong)] ml-1">↕</span>;
     return <span className="text-emerald-400 ml-1">{sortDir === 'desc' ? '↓' : '↑'}</span>;
   }
 
   return (
-    <div className="bg-[#0d1a14] border border-[#1a2e22] rounded-xl overflow-hidden">
+    <div className="bg-[var(--c-card)] border border-[var(--c-border)] rounded-xl overflow-hidden">
       {/* Header */}
-      <div className="px-5 py-4 border-b border-[#1a2e22] flex flex-wrap items-center justify-between gap-3">
+      <div className="px-5 py-4 border-b border-[var(--c-border)] flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div>
-            <span className="font-semibold text-sm text-white">Sites</span>
-            <span className="text-[#4a7060] font-mono text-xs ml-2">
+            <span className="font-semibold text-sm text-[var(--c-text)]">Sites</span>
+            <span className="text-[var(--c-text-3)] font-mono text-xs ml-2">
               {filtered.length === sites.length ? `${sites.length} sites` : `${filtered.length} of ${sites.length} shown`}
             </span>
           </div>
@@ -206,13 +206,13 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {/* Filter tabs */}
-          <div className="flex items-center bg-[#080f0c] border border-[#1a2e22] rounded-lg p-0.5">
+          <div className="flex items-center bg-[var(--c-bg)] border border-[var(--c-border)] rounded-lg p-0.5">
             {(['all', 'active', 'inactive'] as FilterTab[]).map(f => (
               <button
                 key={f}
                 onClick={() => { setFilter(f); setPage(1); }}
                 className={`px-3 py-1 rounded-md text-xs font-mono capitalize transition-colors ${
-                  filter === f ? 'bg-[#1a2e22] text-white' : 'text-[#4a7060] hover:text-white'
+                  filter === f ? 'bg-[var(--c-subtle)] text-[var(--c-text)]' : 'text-[var(--c-text-3)] hover:text-[var(--c-text)]'
                 }`}
               >
                 {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -222,17 +222,17 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
 
           {/* Search */}
           <div className="relative">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4a7060]" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--c-text-3)]" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
             <input
               value={query}
               onChange={e => { setQuery(e.target.value); setPage(1); }}
               placeholder="Search domains…"
-              className="bg-[#080f0c] border border-[#1a2e22] focus:border-emerald-500 rounded-lg pl-8 pr-4 py-1.5 text-xs font-mono text-white placeholder-[#3a5244] focus:outline-none transition-colors w-52"
+              className="bg-[var(--c-bg)] border border-[var(--c-border)] focus:border-emerald-500 rounded-lg pl-8 pr-4 py-1.5 text-xs font-mono text-[var(--c-text)] placeholder-[var(--c-placeholder)] focus:outline-none transition-colors w-52"
             />
             {query && (
-              <button onClick={() => setQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4a7060] hover:text-white">
+              <button onClick={() => setQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--c-text-3)] hover:text-[var(--c-text)]">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                 </svg>
@@ -246,13 +246,13 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
       {/* Export confirm modal */}
       {exportConfirm && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4">
-          <div className="bg-[#0d1a14] border border-[#1a2e22] rounded-2xl w-full max-w-sm">
+          <div className="bg-[var(--c-card)] border border-[var(--c-border)] rounded-2xl w-full max-w-sm">
             <div className="flex items-start justify-between px-6 pt-6 pb-4">
               <div>
                 <p className="text-emerald-400 text-[10px] font-bold uppercase tracking-widest mb-1.5">Export</p>
-                <h3 className="text-white font-semibold text-xl">Download report?</h3>
+                <h3 className="text-[var(--c-text)] font-semibold text-xl">Download report?</h3>
               </div>
-              <button onClick={() => setExportConfirm(false)} className="text-[#6b8f7a] hover:text-white transition-colors mt-1 p-1">
+              <button onClick={() => setExportConfirm(false)} className="text-[var(--c-text-2)] hover:text-[var(--c-text)] transition-colors mt-1 p-1">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                 </svg>
@@ -260,9 +260,9 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
             </div>
             <div className="px-6 pb-6 space-y-5">
               <div className="bg-emerald-400/5 border border-emerald-400/20 rounded-xl px-4 py-3">
-                <p className="text-xs font-mono text-[#6b8f7a]">
+                <p className="text-xs font-mono text-[var(--c-text-2)]">
                   This will download a CSV of all{' '}
-                  <span className="text-white font-semibold">{sites.length} sites</span>{' '}
+                  <span className="text-[var(--c-text)] font-semibold">{sites.length} sites</span>{' '}
                   including their status, pageviews, visitors, top country, and device.
                 </p>
               </div>
@@ -280,7 +280,7 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
                 </button>
                 <button
                   onClick={() => setExportConfirm(false)}
-                  className="flex-1 bg-[#1a2e22] hover:bg-[#213d2a] border border-[#2a4a32] text-white font-semibold py-2.5 rounded-lg text-sm transition-colors"
+                  className="flex-1 bg-[var(--c-subtle)] hover:bg-[var(--c-subtle-hover)] border border-[var(--c-border-strong)] text-white font-semibold py-2.5 rounded-lg text-sm transition-colors"
                 >
                   Cancel
                 </button>
@@ -293,15 +293,15 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
       {/* Confirm delete overlay */}
       {(confirmId || deleting) && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4">
-          <div className="bg-[#0d1a14] border border-[#1a2e22] rounded-2xl w-full max-w-sm">
+          <div className="bg-[var(--c-card)] border border-[var(--c-border)] rounded-2xl w-full max-w-sm">
             {/* Header */}
             <div className="flex items-start justify-between px-6 pt-6 pb-4">
               <div>
                 <p className="text-red-400 text-[10px] font-bold uppercase tracking-widest mb-1.5">Danger Zone</p>
-                <h3 className="text-white font-semibold text-xl">{deleting ? 'Removing site…' : 'Delete site?'}</h3>
+                <h3 className="text-[var(--c-text)] font-semibold text-xl">{deleting ? 'Removing site…' : 'Delete site?'}</h3>
               </div>
               {!deleting && (
-                <button onClick={() => setConfirmId(null)} className="text-[#6b8f7a] hover:text-white transition-colors mt-1 p-1">
+                <button onClick={() => setConfirmId(null)} className="text-[var(--c-text-2)] hover:text-[var(--c-text)] transition-colors mt-1 p-1">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                   </svg>
@@ -313,22 +313,22 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
               {deleting ? (
                 /* Loading state */
                 <div className="space-y-3">
-                  <div className="flex items-center gap-3 text-xs font-mono text-[#6b8f7a]">
+                  <div className="flex items-center gap-3 text-xs font-mono text-[var(--c-text-2)]">
                     <svg className="animate-spin flex-shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
                     </svg>
                     Removing site and all associated data…
                   </div>
-                  <div className="w-full bg-[#060c09] border border-[#1a2e22] rounded-full h-1.5 overflow-hidden">
+                  <div className="w-full bg-[var(--c-deep)] border border-[var(--c-border)] rounded-full h-1.5 overflow-hidden">
                     <div className="bg-red-400 h-full rounded-full animate-pulse w-3/4" />
                   </div>
                 </div>
               ) : (
                 <>
                   <div className="bg-red-400/5 border border-red-400/20 rounded-xl px-4 py-3">
-                    <p className="text-xs font-mono text-[#6b8f7a]">
+                    <p className="text-xs font-mono text-[var(--c-text-2)]">
                       This will permanently remove{' '}
-                      <span className="text-white font-semibold">{sites.find(s => s.id === confirmId)?.domain}</span>{' '}
+                      <span className="text-[var(--c-text)] font-semibold">{sites.find(s => s.id === confirmId)?.domain}</span>{' '}
                       and all its tracked events and stats.
                     </p>
                   </div>
@@ -345,7 +345,7 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
                     </button>
                     <button
                       onClick={() => setConfirmId(null)}
-                      className="flex-1 bg-[#1a2e22] hover:bg-[#213d2a] border border-[#2a4a32] text-white font-semibold py-2.5 rounded-lg text-sm transition-colors"
+                      className="flex-1 bg-[var(--c-subtle)] hover:bg-[var(--c-subtle-hover)] border border-[var(--c-border-strong)] text-white font-semibold py-2.5 rounded-lg text-sm transition-colors"
                     >
                       Cancel
                     </button>
@@ -359,57 +359,57 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
 
       {/* Table */}
       {filtered.length === 0 ? (
-        <div className="py-16 text-center text-[#4a7060] font-mono text-sm">
+        <div className="py-16 text-center text-[var(--c-text-3)] font-mono text-sm">
           {query ? `No domains matching "${query}"` : 'No sites yet.'}
         </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-[#1a2e22]">
-                <th className="px-5 py-3 text-left text-xs font-mono text-[#4a7060] uppercase tracking-widest">Site domain</th>
-                <th className="px-5 py-3 text-right text-xs font-mono text-[#4a7060] uppercase tracking-widest cursor-pointer hover:text-white transition-colors select-none" onClick={() => toggleSort('visitors')}>
+              <tr className="border-b border-[var(--c-border)]">
+                <th className="px-5 py-3 text-left text-xs font-mono text-[var(--c-text-3)] uppercase tracking-widest">Site domain</th>
+                <th className="px-5 py-3 text-right text-xs font-mono text-[var(--c-text-3)] uppercase tracking-widest cursor-pointer hover:text-[var(--c-text)] transition-colors select-none" onClick={() => toggleSort('visitors')}>
                   Visitors <SortIcon k="visitors" />
                 </th>
-                <th className="px-5 py-3 text-right text-xs font-mono text-[#4a7060] uppercase tracking-widest cursor-pointer hover:text-white transition-colors select-none" onClick={() => toggleSort('pageviews')}>
+                <th className="px-5 py-3 text-right text-xs font-mono text-[var(--c-text-3)] uppercase tracking-widest cursor-pointer hover:text-[var(--c-text)] transition-colors select-none" onClick={() => toggleSort('pageviews')}>
                   Pageviews <SortIcon k="pageviews" />
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-mono text-[#4a7060] uppercase tracking-widest">Top page</th>
-                <th className="px-5 py-3 text-left text-xs font-mono text-[#4a7060] uppercase tracking-widest">Top country</th>
-                <th className="px-5 py-3 text-left text-xs font-mono text-[#4a7060] uppercase tracking-widest">Device</th>
-                <th className="px-5 py-3 text-left text-xs font-mono text-[#4a7060] uppercase tracking-widest">Status</th>
-                <th className="px-2 py-3 sticky right-0 bg-[#0d1a14]" />
+                <th className="px-5 py-3 text-left text-xs font-mono text-[var(--c-text-3)] uppercase tracking-widest">Top page</th>
+                <th className="px-5 py-3 text-left text-xs font-mono text-[var(--c-text-3)] uppercase tracking-widest">Top country</th>
+                <th className="px-5 py-3 text-left text-xs font-mono text-[var(--c-text-3)] uppercase tracking-widest">Device</th>
+                <th className="px-5 py-3 text-left text-xs font-mono text-[var(--c-text-3)] uppercase tracking-widest">Status</th>
+                <th className="px-2 py-3 sticky right-0 bg-[var(--c-card)]" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#0f2018]">
+            <tbody className="divide-y divide-[var(--c-divider)]">
               {paginated.map(s => (
                 <tr
                   key={s.id}
                   onClick={() => router.push(`/sites/${s.id}`)}
-                  className="hover:bg-[#0f2018] cursor-pointer transition-colors group select-none"
+                  className="hover:bg-[var(--c-hover)] cursor-pointer transition-colors group select-none"
                 >
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: s.totalPageviews > 0 ? '#34d399' : '#1a2e22', boxShadow: s.totalPageviews > 0 ? '0 0 6px #34d399' : 'none' }} />
+                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: s.totalPageviews > 0 ? '#34d399' : 'var(--c-border)', boxShadow: s.totalPageviews > 0 ? '0 0 6px #34d399' : 'none' }} />
                       <span className="text-emerald-400 font-mono text-sm group-hover:underline underline-offset-2" title={s.domain}>{s.domain}</span>
                     </div>
                   </td>
-                  <td className="px-5 py-3.5 text-right font-mono tabular-nums text-white text-sm font-semibold tracking-tight">{s.totalVisitors.toLocaleString()}</td>
-                  <td className="px-5 py-3.5 text-right font-mono tabular-nums text-white text-sm font-semibold tracking-tight">{s.totalPageviews.toLocaleString()}</td>
-                  <td className="px-5 py-3.5 font-mono text-[#6b8f7a] text-xs max-w-[180px]">
+                  <td className="px-5 py-3.5 text-right font-mono tabular-nums text-[var(--c-text)] text-sm font-semibold tracking-tight">{s.totalVisitors.toLocaleString()}</td>
+                  <td className="px-5 py-3.5 text-right font-mono tabular-nums text-[var(--c-text)] text-sm font-semibold tracking-tight">{s.totalPageviews.toLocaleString()}</td>
+                  <td className="px-5 py-3.5 font-mono text-[var(--c-text-2)] text-xs max-w-[180px]">
                     {s.topPage
                       ? <span className="block truncate" title={`/${s.topPage.replace(/^\//, '')}`}>{`/${s.topPage.replace(/^\//, '')}`}</span>
-                      : <span className="text-[#4a7060]">—</span>}
+                      : <span className="text-[var(--c-text-3)]">—</span>}
                   </td>
                   <td className="px-5 py-3.5"><CountryBadge country={s.topCountry} /></td>
                   <td className="px-5 py-3.5"><DeviceIcon device={s.topDevice} /></td>
                   <td className="px-5 py-3.5">
                     <StatusBadge pageviews={s.totalPageviews} lastEvent={s.lastEvent} />
                   </td>
-                  <td className="px-3 py-3.5 sticky right-0 bg-[#0d1a14] group-hover:bg-[#0f2018] transition-colors" onClick={e => e.stopPropagation()}>
+                  <td className="px-3 py-3.5 sticky right-0 bg-[var(--c-card)] group-hover:bg-[var(--c-hover)] transition-colors" onClick={e => e.stopPropagation()}>
                     <button
                       onClick={e => { e.stopPropagation(); setConfirmId(s.id); }}
-                      className="text-[#4a7060] hover:text-red-400 transition-all duration-100 p-4 rounded-lg hover:bg-red-400/10 cursor-pointer"
+                      className="text-[var(--c-text-3)] hover:text-red-400 transition-all duration-100 p-4 rounded-lg hover:bg-red-400/10 cursor-pointer"
                       title="Delete site"
                     >
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -427,8 +427,8 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="px-5 py-3 border-t border-[#1a2e22] flex items-center justify-between">
-          <span className="text-xs font-mono text-[#4a7060]">
+        <div className="px-5 py-3 border-t border-[var(--c-border)] flex items-center justify-between">
+          <span className="text-xs font-mono text-[var(--c-text-3)]">
             {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
           </span>
           <div className="flex items-center gap-1">
@@ -436,7 +436,7 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
             <button
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="w-7 h-7 flex items-center justify-center rounded-md text-[#4a7060] hover:text-white hover:bg-[#1a2e22] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="w-7 h-7 flex items-center justify-center rounded-md text-[var(--c-text-3)] hover:text-[var(--c-text)] hover:bg-[var(--c-subtle)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
@@ -456,13 +456,13 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
 
               return range.map((p, i) =>
                 p === '…' ? (
-                  <span key={`ellipsis-${i}`} className="w-7 h-7 flex items-center justify-center text-xs font-mono text-[#4a7060]">…</span>
+                  <span key={`ellipsis-${i}`} className="w-7 h-7 flex items-center justify-center text-xs font-mono text-[var(--c-text-3)]">…</span>
                 ) : (
                   <button
                     key={p}
                     onClick={() => setPage(p as number)}
                     className={`w-7 h-7 flex items-center justify-center rounded-md text-xs font-mono transition-colors ${
-                      page === p ? 'bg-emerald-400/20 text-emerald-400 border border-emerald-400/30' : 'text-[#6b8f7a] hover:text-white hover:bg-[#1a2e22]'
+                      page === p ? 'bg-emerald-400/20 text-emerald-400 border border-emerald-400/30' : 'text-[var(--c-text-2)] hover:text-[var(--c-text)] hover:bg-[var(--c-subtle)]'
                     }`}
                   >
                     {p}
@@ -475,7 +475,7 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
             <button
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
-              className="w-7 h-7 flex items-center justify-center rounded-md text-[#4a7060] hover:text-white hover:bg-[#1a2e22] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="w-7 h-7 flex items-center justify-center rounded-md text-[var(--c-text-3)] hover:text-[var(--c-text)] hover:bg-[var(--c-subtle)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
             </button>

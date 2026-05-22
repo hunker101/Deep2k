@@ -1,6 +1,7 @@
 import './globals.css';
 import type { ReactNode } from 'react';
 import { Geist_Mono } from 'next/font/google';
+import { ThemeProvider } from '@/components/ThemeProvider';
 
 const geistMono = Geist_Mono({
   subsets: ['latin'],
@@ -15,9 +16,11 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={geistMono.variable}>
-      <body className="min-h-screen bg-[#080f0c] text-white antialiased font-mono">
-        {children}
+    <html lang="en" className={geistMono.variable} suppressHydrationWarning>
+      <body className="min-h-screen bg-[var(--c-bg)] text-[var(--c-text)] antialiased font-mono transition-colors duration-200">
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

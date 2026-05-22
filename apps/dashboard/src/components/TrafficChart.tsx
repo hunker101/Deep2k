@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTheme } from 'next-themes';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -26,13 +27,13 @@ function formatNum(n: number) {
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-[#0a1a10] border border-[#1a2e22] rounded-xl px-4 py-3 shadow-xl">
-      <p className="text-xs font-mono text-[#6b8f7a] mb-2">{typeof label === 'string' ? formatDate(label) : ''}</p>
+    <div className="bg-[var(--c-deep)] border border-[var(--c-border)] rounded-xl px-4 py-3 shadow-xl">
+      <p className="text-xs font-mono text-[var(--c-text-2)] mb-2">{typeof label === 'string' ? formatDate(label) : ''}</p>
       {payload.map((entry: any) => (
         <div key={entry.name} className="flex items-center gap-2 text-sm font-mono">
           <span className="w-2 h-2 rounded-full" style={{ background: entry.color }} />
-          <span className="text-[#6b8f7a]">{entry.name === 'visitors' ? 'Visitors' : 'Pageviews'}</span>
-          <span className="text-white font-semibold ml-auto pl-4">{Number(entry.value).toLocaleString()}</span>
+          <span className="text-[var(--c-text-2)]">{entry.name === 'visitors' ? 'Visitors' : 'Pageviews'}</span>
+          <span className="text-[var(--c-text)] font-semibold ml-auto pl-4">{Number(entry.value).toLocaleString()}</span>
         </div>
       ))}
     </div>
@@ -50,6 +51,13 @@ export function TrafficChart({
 }) {
   const [showVisitors, setShowVisitors] = useState(true);
   const [showPageviews, setShowPageviews] = useState(true);
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme !== 'light';
+
+  const gridColor = isDark ? '#1a2e22' : '#cce5d8';
+  const tickColor = isDark ? '#4a7060' : '#5a8870';
+  const cursorColor = isDark ? '#2a4a32' : '#a8d4bf';
+
   const sorted = [...data].sort((a, b) => a.date.localeCompare(b.date));
 
   return (
@@ -60,11 +68,11 @@ export function TrafficChart({
           onClick={() => setShowVisitors(v => !v)}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-mono transition-all ${
             showVisitors
-              ? 'bg-emerald-400/10 border-emerald-400/30 text-white'
-              : 'bg-transparent border-[#1a2e22] text-[#4a7060]'
+              ? 'bg-emerald-400/10 border-emerald-400/30 text-[var(--c-text)]'
+              : 'bg-transparent border-[var(--c-border)] text-[var(--c-text-3)]'
           }`}
         >
-          <span className={`w-2 h-2 rounded-full transition-all ${showVisitors ? 'bg-emerald-400 shadow-[0_0_6px_#34d399]' : 'bg-[#1a2e22]'}`} />
+          <span className={`w-2 h-2 rounded-full transition-all ${showVisitors ? 'bg-emerald-400 shadow-[0_0_6px_#34d399]' : 'bg-[var(--c-border)]'}`} />
           Visitors
           <span className="font-bold">{totalVisitors.toLocaleString()}</span>
         </button>
@@ -73,11 +81,11 @@ export function TrafficChart({
           onClick={() => setShowPageviews(v => !v)}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-mono transition-all ${
             showPageviews
-              ? 'bg-sky-400/10 border-sky-400/30 text-white'
-              : 'bg-transparent border-[#1a2e22] text-[#4a7060]'
+              ? 'bg-sky-400/10 border-sky-400/30 text-[var(--c-text)]'
+              : 'bg-transparent border-[var(--c-border)] text-[var(--c-text-3)]'
           }`}
         >
-          <span className={`w-2 h-2 rounded-full transition-all ${showPageviews ? 'bg-sky-400 shadow-[0_0_6px_#38bdf8]' : 'bg-[#1a2e22]'}`} />
+          <span className={`w-2 h-2 rounded-full transition-all ${showPageviews ? 'bg-sky-400 shadow-[0_0_6px_#38bdf8]' : 'bg-[var(--c-border)]'}`} />
           Pageviews
           <span className="font-bold">{totalPageviews.toLocaleString()}</span>
         </button>
@@ -96,23 +104,23 @@ export function TrafficChart({
               <stop offset="100%" stopColor="#38bdf8" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1a2e22" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
           <XAxis
             dataKey="date"
             tickFormatter={formatDate}
-            tick={{ fill: '#4a7060', fontSize: 11, fontFamily: 'monospace' }}
+            tick={{ fill: tickColor, fontSize: 11, fontFamily: 'monospace' }}
             axisLine={false}
             tickLine={false}
             dy={6}
           />
           <YAxis
             tickFormatter={formatNum}
-            tick={{ fill: '#4a7060', fontSize: 11, fontFamily: 'monospace' }}
+            tick={{ fill: tickColor, fontSize: 11, fontFamily: 'monospace' }}
             axisLine={false}
             tickLine={false}
             width={32}
           />
-          <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#2a4a32', strokeWidth: 1 }} />
+          <Tooltip content={<CustomTooltip />} cursor={{ stroke: cursorColor, strokeWidth: 1 }} />
           {showPageviews && (
             <Area
               type="monotone"

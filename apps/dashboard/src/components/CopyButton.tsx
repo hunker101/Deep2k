@@ -14,7 +14,7 @@ export function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={handleCopy}
-      className="text-[#6b8f7a] hover:text-emerald-400 transition-colors"
+      className="text-[var(--c-text-2)] hover:text-emerald-400 transition-colors"
       title={copied ? 'Copied!' : 'Copy'}
     >
       {copied ? (
