@@ -39,6 +39,7 @@ export function statsRouter(db: Db): Router {
     const q = RangeQuery.safeParse(req.query);
     if (!q.success) { res.status(400).json({ error: 'invalid query' }); return; }
 
+    try {
     const conditions = [];
     if (q.data.from) conditions.push(gte(dailyStats.date, q.data.from));
     if (q.data.to) conditions.push(lte(dailyStats.date, q.data.to));
@@ -73,6 +74,10 @@ export function statsRouter(db: Db): Router {
       siteCount: countRow?.count ?? 0,
       daily,
     });
+    } catch (err) {
+      console.error('[overview] db error:', err);
+      res.status(500).json({ error: 'db error' });
+    }
   });
 
   // Sites list enriched with aggregate stats for the home page table.
@@ -87,6 +92,7 @@ export function statsRouter(db: Db): Router {
       return;
     }
 
+    try {
     // Step 1: fast base query — sites + totals + last event via single GROUP BY
     const baseResult = await db.execute(sql`
       SELECT
@@ -163,6 +169,10 @@ export function statsRouter(db: Db): Router {
 
     summaryCache.set(cacheKey, { data: rows, expires: Date.now() + 5_000 });
     res.json(rows);
+    } catch (err) {
+      console.error('[sites-summary] db error:', err);
+      res.status(500).json({ error: 'db error' });
+    }
   });
 
   return router;

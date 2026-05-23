@@ -10,7 +10,7 @@ export function makeDb(connectionString: string): { db: Db; pool: pg.Pool } {
     ssl: { rejectUnauthorized: false },
     keepAlive: true,
     idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 5_000,
+    connectionTimeoutMillis: 30_000,
   });
   const db = drizzle(pool, { schema });
   return { db, pool };
