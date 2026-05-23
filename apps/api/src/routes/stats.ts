@@ -162,7 +162,7 @@ export function statsRouter(db: Db): Router {
       topDevice: deviceMap[r.id] ?? null,
     }));
 
-    summaryCache.set(cacheKey, { data: rows, expires: Date.now() + 30_000 });
+    summaryCache.set(cacheKey, { data: rows, expires: Date.now() + 5_000 });
     res.json(rows);
   });
 
