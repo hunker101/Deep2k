@@ -117,20 +117,20 @@ export default async function SitePage({
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold text-[var(--c-text)]">{site?.domain ?? id}</h1>
               {(() => {
-                const stale = !lastEvent || Date.now() - new Date(lastEvent).getTime() > 24 * 60 * 60 * 1000;
-                if (totalPageviews > 0 && !stale) return (
+                if (!lastEvent) return (
+                  <span className="inline-flex items-center gap-1.5 bg-[var(--c-subtle)] text-[var(--c-text-3)] border border-[var(--c-border)] text-xs font-mono px-2 py-0.5 rounded-full">
+                    <span className="w-1 h-1 rounded-full bg-[var(--c-text-3)]"/>Inactive
+                  </span>
+                );
+                const stale = Date.now() - new Date(lastEvent).getTime() > 24 * 60 * 60 * 1000;
+                if (!stale) return (
                   <span className="inline-flex items-center gap-1.5 bg-emerald-400/10 text-emerald-400 border border-emerald-400/20 text-xs font-mono px-2 py-0.5 rounded-full">
                     <span className="w-1 h-1 rounded-full bg-emerald-400"/>Active
                   </span>
                 );
-                if (totalPageviews > 0 && stale) return (
+                return (
                   <span className="inline-flex items-center gap-1.5 bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 text-xs font-mono px-2 py-0.5 rounded-full" title="No events received in the last 24h">
                     <span className="w-1 h-1 rounded-full bg-yellow-400"/>Stale
-                  </span>
-                );
-                return (
-                  <span className="inline-flex items-center gap-1.5 bg-[var(--c-subtle)] text-[var(--c-text-3)] border border-[var(--c-border)] text-xs font-mono px-2 py-0.5 rounded-full">
-                    <span className="w-1 h-1 rounded-full bg-[var(--c-text-3)]"/>Inactive
                   </span>
                 );
               })()}

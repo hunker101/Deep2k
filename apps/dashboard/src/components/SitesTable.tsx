@@ -60,9 +60,9 @@ function isStale(lastEvent: string | null): boolean {
 }
 
 function getStatus(s: SiteSummaryRow): string {
-  if (s.totalPageviews > 0 && !isStale(s.lastEvent)) return 'Active';
-  if (s.totalPageviews > 0 && isStale(s.lastEvent)) return 'Stale';
-  return 'Inactive';
+  if (!s.lastEvent) return 'Inactive';
+  if (!isStale(s.lastEvent)) return 'Active';
+  return 'Stale';
 }
 
 function exportCSV(sites: SiteSummaryRow[]) {
@@ -88,9 +88,16 @@ function exportCSV(sites: SiteSummaryRow[]) {
   URL.revokeObjectURL(url);
 }
 
-function StatusBadge({ pageviews, lastEvent }: { pageviews: number; lastEvent: string | null }) {
-  const stale = isStale(lastEvent);
-  if (pageviews > 0 && !stale) {
+function StatusBadge({ lastEvent }: { lastEvent: string | null }) {
+  if (!lastEvent) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-full border bg-[var(--c-subtle)] text-[var(--c-text-3)] border-[var(--c-border)]">
+        <span className="w-1.5 h-1.5 rounded-full bg-[var(--c-text-3)]" />
+        Inactive
+      </span>
+    );
+  }
+  if (!isStale(lastEvent)) {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-full border bg-emerald-400/10 text-emerald-400 border-emerald-400/20">
         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
@@ -98,18 +105,10 @@ function StatusBadge({ pageviews, lastEvent }: { pageviews: number; lastEvent: s
       </span>
     );
   }
-  if (pageviews > 0 && stale) {
-    return (
-      <span className="inline-flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-full border bg-yellow-400/10 text-yellow-400 border-yellow-400/20" title="No events received in the last 24h">
-        <span className="w-1.5 h-1.5 rounded-full bg-yellow-400" />
-        Stale
-      </span>
-    );
-  }
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-full border bg-[var(--c-subtle)] text-[var(--c-text-3)] border-[var(--c-border)]">
-      <span className="w-1.5 h-1.5 rounded-full bg-[var(--c-text-3)]" />
-      Inactive
+    <span className="inline-flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-full border bg-yellow-400/10 text-yellow-400 border-yellow-400/20" title="No events received in the last 24h">
+      <span className="w-1.5 h-1.5 rounded-full bg-yellow-400" />
+      Stale
     </span>
   );
 }
@@ -149,8 +148,8 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
 
   const filtered = sites
     .filter(s => {
-      if (filter === 'active') return s.totalPageviews > 0 && !isStale(s.lastEvent);
-      if (filter === 'inactive') return s.totalPageviews === 0 || isStale(s.lastEvent);
+      if (filter === 'active') return !!s.lastEvent && !isStale(s.lastEvent);
+      if (filter === 'inactive') return !s.lastEvent || isStale(s.lastEvent);
       return true;
     })
     .filter(s => !query.trim() || s.domain.toLowerCase().includes(query.toLowerCase().trim()))
@@ -404,7 +403,7 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
                   <td className="px-5 py-3.5"><CountryBadge country={s.topCountry} /></td>
                   <td className="px-5 py-3.5"><DeviceIcon device={s.topDevice} /></td>
                   <td className="px-5 py-3.5">
-                    <StatusBadge pageviews={s.totalPageviews} lastEvent={s.lastEvent} />
+                    <StatusBadge lastEvent={s.lastEvent} />
                   </td>
                   <td className="px-3 py-3.5 sticky right-0 bg-[var(--c-card)] group-hover:bg-[var(--c-hover)] transition-colors" onClick={e => e.stopPropagation()}>
                     <button
