@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import { and, desc, eq, gte, lte, sql } from 'drizzle-orm';
 import { dailyStats, type Db } from '@deep2k/db';
 import { z } from 'zod';
+import { summaryCache } from '../summaryCache.js';
 
 const RangeQuery = z.object({
   from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
@@ -73,8 +74,6 @@ export function statsRouter(db: Db): Router {
       daily,
     });
   });
-
-  const summaryCache = new Map<string, { data: unknown; expires: number }>();
 
   // Sites list enriched with aggregate stats for the home page table.
   router.get('/sites-summary', async (req: Request, res: Response) => {

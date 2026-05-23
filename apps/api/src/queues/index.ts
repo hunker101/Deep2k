@@ -1,5 +1,6 @@
 import { events, type Db } from '@deep2k/db';
 import type { IngestEvent } from '@deep2k/shared';
+import { invalidateSummaryCache } from '../summaryCache.js';
 
 const MAX_BATCH = 100;
 const MAX_DELAY_MS = 1000;
@@ -44,6 +45,7 @@ export async function flush(isRetry = false): Promise<void> {
       })),
     );
     console.log(`[queue] flushed ${batch.length} events`);
+    invalidateSummaryCache();
   } catch (err) {
     if (!isRetry) {
       console.error('[queue] flush failed, retrying in 5s:', err);
