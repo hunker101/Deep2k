@@ -21,6 +21,18 @@ export const ENDPOINT_PATH_POOL = [
   '/_a/c',
   '/__/t',
   '/m/s',
+  '/_b/t',
+  '/r/e',
+  '/_p/v',
+  '/js/c',
+  '/_/c',
+  '/v/p',
+  '/_t/r',
+  '/e.gif',
+  '/_/r',
+  '/b/p',
+  '/_e/t',
+  '/c/p',
 ] as const;
 
 export const DEVICE_TYPES = ['mobile', 'tablet', 'desktop'] as const;

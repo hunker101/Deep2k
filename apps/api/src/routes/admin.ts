@@ -8,6 +8,7 @@ import { flush } from '../queues/index.js';
 import { sendDiscordReport } from '../jobs/discordReport.js';
 import { pushSiteToKV } from '../lib/cloudflare.js';
 import { generateVariableSeed, pickBeaconMethod, pickInitDelayMs } from '@deep2k/tracker-generator';
+import { ENDPOINT_PATH_POOL } from '@deep2k/shared';
 
 export function adminRouter(db: Db): Router {
   const router = Router();
@@ -97,6 +98,54 @@ export function adminRouter(db: Db): Router {
         }
       }));
       res.json({ ok: true, synced: results.length, results });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: String(err) });
+    }
+  });
+
+  // Detect sites sharing the same endpointPath and assign unique paths to duplicates.
+  // After running this, re-inject the tracker script on each affected Shopify store.
+  router.post('/admin/fix-collisions', async (_req: Request, res: Response) => {
+    try {
+      const rows = await db.select().from(sites);
+
+      // Group sites by endpointPath to find collisions
+      const pathToSites = new Map<string, typeof rows>();
+      for (const row of rows) {
+        const arr = pathToSites.get(row.endpointPath) ?? [];
+        arr.push(row);
+        pathToSites.set(row.endpointPath, arr);
+      }
+
+      const usedPaths = new Set(rows.map(r => r.endpointPath));
+      const availablePaths = (ENDPOINT_PATH_POOL as readonly string[]).filter(p => !usedPaths.has(p));
+
+      const fixes: { domain: string; oldPath: string; newPath: string; status: string }[] = [];
+
+      for (const [path, group] of pathToSites) {
+        if (group.length <= 1) continue;
+        // Keep first site on current path; re-assign the rest
+        for (let i = 1; i < group.length; i++) {
+          const site = group[i]!;
+          const newPath = availablePaths.shift();
+          if (!newPath) {
+            fixes.push({ domain: site.domain, oldPath: path, newPath: '', status: 'error: pool exhausted' });
+            continue;
+          }
+          usedPaths.add(newPath);
+          await db.update(sites).set({ endpointPath: newPath }).where(eq(sites.id, site.id));
+          await pushSiteToKV(site.domain, {
+            id: site.id,
+            secret: site.secret,
+            endpoint_path: newPath,
+            backend_url: site.backendUrl,
+          }).catch(err => console.error('[cf-kv] fix-collisions push failed:', err));
+          fixes.push({ domain: site.domain, oldPath: path, newPath, status: 'fixed' });
+        }
+      }
+
+      const collisions = fixes.filter(f => f.status === 'fixed' || f.status.startsWith('error'));
+      res.json({ ok: true, collisions_found: collisions.length, fixes });
     } catch (err) {
       res.status(500).json({ ok: false, error: String(err) });
     }
