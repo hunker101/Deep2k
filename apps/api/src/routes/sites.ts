@@ -100,6 +100,13 @@ export function sitesRouter(db: Db, env: Env): Router {
     res.json(row);
   });
 
+  router.post('/sites/:id/mark-injected', async (req: Request, res: Response) => {
+    const id = req.params.id ?? '';
+    const [row] = await db.update(sites).set({ lastInjectedAt: new Date() }).where(eq(sites.id, id)).returning();
+    if (!row) { res.status(404).end(); return; }
+    res.json({ lastInjectedAt: row.lastInjectedAt });
+  });
+
   router.get('/sites/:id/script', async (req: Request, res: Response) => {
     const site = await db.query.sites.findFirst({
       where: eq(sites.id, req.params.id ?? ''),

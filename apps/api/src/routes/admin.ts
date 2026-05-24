@@ -44,6 +44,15 @@ export function adminRouter(db: Db): Router {
   });
 
   // One-time migration: add bounced_visitors column to daily_stats
+  router.post('/admin/migrate-last-injected', async (_req: Request, res: Response) => {
+    try {
+      await db.execute(sql`ALTER TABLE sites ADD COLUMN IF NOT EXISTS last_injected_at timestamptz`);
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: String(err) });
+    }
+  });
+
   router.post('/admin/migrate-bounce', async (_req: Request, res: Response) => {
     try {
       await db.execute(sql`ALTER TABLE daily_stats ADD COLUMN IF NOT EXISTS bounced_visitors integer NOT NULL DEFAULT 0`);

@@ -6,6 +6,7 @@ export interface SiteRow {
   scriptPath: string;
   endpointPath: string;
   beaconMethod: string;
+  lastInjectedAt: string | null;
   createdAt: string;
 }
 

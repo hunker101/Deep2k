@@ -2,66 +2,59 @@
 
 import { useState } from 'react';
 
-interface RotationStatus {
-  lastRotatedAt: string | null;
-  daysSince: number | null;
-}
-
-export function GetScriptButton({ siteId }: { siteId: string }) {
+export function GetScriptButton({ siteId, lastInjectedAt: initialLastInjectedAt }: { siteId: string; lastInjectedAt: string | null }) {
   const [open, setOpen] = useState(false);
   const [script, setScript] = useState('');
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [rotation, setRotation] = useState<RotationStatus | null>(null);
+  const [lastInjectedAt, setLastInjectedAt] = useState<string | null>(initialLastInjectedAt);
 
   async function handleOpen() {
     setOpen(true);
     if (script) return;
     setLoading(true);
     try {
-      const [scriptRes, rotationRes] = await Promise.all([
-        fetch(`/api/sites/${siteId}/script`),
-        fetch('/api/rotation-status'),
-      ]);
-      const text = await scriptRes.text();
-      setScript(text);
-      if (rotationRes.ok) setRotation(await rotationRes.json());
+      const res = await fetch(`/api/sites/${siteId}/script`);
+      setScript(await res.text());
     } finally {
       setLoading(false);
     }
   }
 
-  function RotationBadge() {
-    if (!rotation) return null;
-    const { lastRotatedAt, daysSince } = rotation;
-    if (!lastRotatedAt || daysSince === null) {
+  function daysSince(iso: string): number {
+    return Math.floor((Date.now() - new Date(iso).getTime()) / (1000 * 60 * 60 * 24));
+  }
+
+  function InjectionBadge() {
+    if (!lastInjectedAt) {
       return (
         <span className="inline-flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-full bg-[var(--c-subtle)] text-[var(--c-text-3)] border border-[var(--c-border)]">
           <span className="w-1.5 h-1.5 rounded-full bg-[var(--c-text-3)]" />
-          Never rotated
+          Never injected
         </span>
       );
     }
-    if (daysSince >= 180) {
+    const d = daysSince(lastInjectedAt);
+    if (d >= 90) {
       return (
         <span className="inline-flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-full bg-red-400/10 text-red-400 border border-red-400/20">
           <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
-          Overdue · {daysSince}d ago
+          Overdue · {d}d ago
         </span>
       );
     }
-    if (daysSince >= 150) {
+    if (d >= 60) {
       return (
         <span className="inline-flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-full bg-yellow-400/10 text-yellow-400 border border-yellow-400/20">
           <span className="w-1.5 h-1.5 rounded-full bg-yellow-400" />
-          Due soon · {daysSince}d ago
+          Due soon · {d}d ago
         </span>
       );
     }
     return (
       <span className="inline-flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-full bg-emerald-400/10 text-emerald-400 border border-emerald-400/20">
         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-        Fresh · {daysSince}d ago
+        Fresh · {d}d ago
       </span>
     );
   }
@@ -70,6 +63,12 @@ export function GetScriptButton({ siteId }: { siteId: string }) {
     await navigator.clipboard.writeText(`<script>\n${script}\n</script>`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+    // Mark this site as injected
+    const res = await fetch(`/api/sites/${siteId}/mark-injected`, { method: 'POST' });
+    if (res.ok) {
+      const data = await res.json() as { lastInjectedAt: string };
+      setLastInjectedAt(data.lastInjectedAt);
+    }
   }
 
   return (
@@ -92,7 +91,7 @@ export function GetScriptButton({ siteId }: { siteId: string }) {
               <div>
                 <div className="flex items-center gap-2.5 mb-1">
                   <h3 className="text-[var(--c-text)] font-semibold text-sm">Tracker script</h3>
-                  <RotationBadge />
+                  <InjectionBadge />
                 </div>
                 <p className="text-xs font-mono text-[var(--c-text-2)]">Copy and paste into <span className="text-[var(--c-text)]">snippets/deep2k-tracker.liquid</span></p>
               </div>

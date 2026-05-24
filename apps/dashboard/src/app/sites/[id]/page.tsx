@@ -201,62 +201,60 @@ export default async function SitePage({
           )}
         </div>
 
-        {/* Top pages / Top countries / Device breakdown */}
+        {/* Top pages / Top countries / Top referrers */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <Panel title="Top pages" count={topPages.length}>
+          <Panel title="Top pages" count={topPages.length} subtitle={`${topPages.length} tracked`}>
             {topPages.length === 0 ? <EmptyPanel /> : topPages.map(([path, count]) => (
               <RankRow key={path} label={path} count={count} total={totalPageviews} />
             ))}
           </Panel>
 
-          <Panel title="Top countries" count={topCountries.length}>
+          <Panel title="Top countries" count={topCountries.length} subtitle={`${topCountries.length} regions`}>
             {topCountries.length === 0 ? <EmptyPanel /> : topCountries.map(([country, count]) => (
               <CountryRankRow key={country} country={country} count={count} total={totalVisitors} />
             ))}
           </Panel>
-        </div>
 
-        {/* Top referrers / Device breakdown */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <Panel title="Top referrers" count={topReferrers.length} subtitle="Referring domains · direct traffic excluded">
-            {topReferrers.length === 0 ? <EmptyPanel /> : topReferrers.map(([ref, count]) => (
-              <ReferrerRow key={ref} referrer={ref} count={count} total={totalVisitors} />
+          <Panel title="Top referrers" count={topReferrers.length} subtitle={`${topReferrers.length} sources`}>
+            {topReferrers.length === 0 ? <EmptyPanel /> : topReferrers.map(([ref, count], i) => (
+              <ReferrerRow key={ref} referrer={ref} count={count} total={totalVisitors} index={i} />
             ))}
           </Panel>
+        </div>
 
-          <div className="bg-[var(--c-card)] border border-[var(--c-border)] rounded-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-[var(--c-border)]">
-              <h3 className="text-sm font-semibold text-[var(--c-text)]">Device breakdown</h3>
-              <p className="text-xs text-[var(--c-text-2)] font-mono mt-0.5">Share of sessions over selected range</p>
-            </div>
-            <div className="p-5">
-              {deviceList.length === 0 ? (
-                <EmptyPanel />
-              ) : (
-                <>
-                  <div className="flex rounded-full overflow-hidden h-3 mb-4 gap-px">
-                    {deviceList.map(([d, v]) => (
-                      <div
-                        key={d}
-                        style={{ width: `${(v / totalDevices) * 100}%` }}
-                        className={deviceColor(d)}
-                      />
-                    ))}
-                  </div>
-                  <div className="space-y-2">
-                    {deviceList.map(([d, v]) => (
-                      <div key={d} className="flex items-center justify-between text-xs font-mono">
-                        <span className={`flex items-center gap-2 ${deviceColor(d).replace('bg-', 'text-')}`}>
-                          <DeviceIcon device={d} />
-                          <span className="text-[var(--c-text)]">{cap(d)}</span>
-                        </span>
-                        <span className="text-[var(--c-text-2)]">{Math.round((v / totalDevices) * 100)}%</span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
+        {/* Device breakdown — full width */}
+        <div className="bg-[var(--c-card)] border border-[var(--c-border)] rounded-xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-[var(--c-border)]">
+            <h3 className="text-sm font-semibold text-[var(--c-text)]">Device breakdown</h3>
+            <p className="text-xs text-[var(--c-text-2)] font-mono mt-0.5">Share of sessions over selected range</p>
+          </div>
+          <div className="p-5">
+            {deviceList.length === 0 ? (
+              <EmptyPanel />
+            ) : (
+              <>
+                <div className="flex rounded-full overflow-hidden h-3 mb-4 gap-px">
+                  {deviceList.map(([d, v]) => (
+                    <div
+                      key={d}
+                      style={{ width: `${(v / totalDevices) * 100}%` }}
+                      className={deviceColor(d)}
+                    />
+                  ))}
+                </div>
+                <div className="flex items-center gap-6">
+                  {deviceList.map(([d, v]) => (
+                    <div key={d} className="flex items-center gap-2 text-xs font-mono">
+                      <span className={`flex items-center gap-1.5 ${deviceColor(d).replace('bg-', 'text-')}`}>
+                        <DeviceIcon device={d} />
+                        <span className="text-[var(--c-text)]">{cap(d)}</span>
+                      </span>
+                      <span className="text-[var(--c-text-2)]">{Math.round((v / totalDevices) * 100)}%</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -267,7 +265,7 @@ export default async function SitePage({
               <h3 className="text-sm font-semibold text-[var(--c-text)]">Beacon &amp; worker</h3>
               <p className="text-xs text-[var(--c-text-2)] font-mono mt-0.5">Deployed configuration for this property</p>
             </div>
-            {site && <GetScriptButton siteId={site.id} />}
+            {site && <GetScriptButton siteId={site.id} lastInjectedAt={site.lastInjectedAt?.toString() ?? null} />}
           </div>
           {site ? (
             <div className="divide-y divide-[var(--c-border)]">
@@ -386,16 +384,28 @@ function Panel({ title, count, subtitle, children }: { title: string; count: num
   );
 }
 
-function ReferrerRow({ referrer, count, total }: { referrer: string; count: number; total: number }) {
+const REFERRER_COLORS = [
+  'bg-emerald-400/20 text-emerald-400',
+  'bg-sky-400/20 text-sky-400',
+  'bg-violet-400/20 text-violet-400',
+  'bg-amber-400/20 text-amber-400',
+  'bg-rose-400/20 text-rose-400',
+  'bg-teal-400/20 text-teal-400',
+  'bg-orange-400/20 text-orange-400',
+  'bg-pink-400/20 text-pink-400',
+];
+
+function ReferrerRow({ referrer, count, total, index }: { referrer: string; count: number; total: number; index: number }) {
   const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+  const color = REFERRER_COLORS[index % REFERRER_COLORS.length]!;
+  const letter = referrer.charAt(0).toUpperCase();
   return (
     <div className="px-5 py-2.5 flex items-center justify-between gap-3 relative">
       <div className="absolute inset-0 bg-sky-400/5" style={{ width: `${pct}%` }} />
       <span className="flex items-center gap-2 relative z-10 min-w-0">
-        <svg className="flex-shrink-0 text-[var(--c-text-3)]" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-        </svg>
+        <span className={`flex-shrink-0 w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold ${color}`}>
+          {letter}
+        </span>
         <span className="text-xs font-mono text-[var(--c-text-2)] truncate">{referrer}</span>
       </span>
       <span className="text-xs font-mono text-[var(--c-text)] relative z-10 tabular-nums flex-shrink-0">{count.toLocaleString()}</span>

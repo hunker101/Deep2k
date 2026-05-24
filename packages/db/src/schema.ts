@@ -25,6 +25,7 @@ export const sites = pgTable(
     initDelayMs: integer('init_delay_ms').notNull(),
     variableSeed: text('variable_seed').notNull(),
     backendUrl: text('backend_url'),
+    lastInjectedAt: timestamp('last_injected_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
