@@ -7,6 +7,7 @@ export function GetScriptButton({ siteId, lastInjectedAt: initialLastInjectedAt 
   const [script, setScript] = useState('');
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [marked, setMarked] = useState(false);
   const [lastInjectedAt, setLastInjectedAt] = useState<string | null>(initialLastInjectedAt);
 
   async function handleOpen() {
@@ -63,11 +64,15 @@ export function GetScriptButton({ siteId, lastInjectedAt: initialLastInjectedAt 
     await navigator.clipboard.writeText(`<script>\n${script}\n</script>`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-    // Mark this site as injected
+  }
+
+  async function handleMarkInjected() {
     const res = await fetch(`/api/sites/${siteId}/mark-injected`, { method: 'POST' });
     if (res.ok) {
       const data = await res.json() as { lastInjectedAt: string };
       setLastInjectedAt(data.lastInjectedAt);
+      setMarked(true);
+      setTimeout(() => setMarked(false), 2000);
     }
   }
 
@@ -114,8 +119,7 @@ export function GetScriptButton({ siteId, lastInjectedAt: initialLastInjectedAt 
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 border-t border-[var(--c-border)] flex items-center justify-between flex-shrink-0">
-              <p className="text-xs font-mono text-[var(--c-text-3)]">Replaces the content of <span className="text-[var(--c-text)]">snippets/deep2k-tracker.liquid</span></p>
+            <div className="px-6 py-4 border-t border-[var(--c-border)] flex items-center justify-between flex-shrink-0 gap-3">
               <button
                 onClick={handleCopy}
                 disabled={loading}
@@ -135,6 +139,27 @@ export function GetScriptButton({ siteId, lastInjectedAt: initialLastInjectedAt 
                       <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                     </svg>
                     Copy script
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handleMarkInjected}
+                disabled={loading}
+                className="flex items-center gap-2 border border-[var(--c-border)] hover:border-emerald-400/40 hover:text-emerald-400 text-[var(--c-text-2)] disabled:opacity-40 text-xs font-semibold px-4 py-2 rounded-lg transition-colors"
+              >
+                {marked ? (
+                  <>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    Marked!
+                  </>
+                ) : (
+                  <>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <path d="M20 6L9 17l-5-5"/>
+                    </svg>
+                    Mark as injected
                   </>
                 )}
               </button>
