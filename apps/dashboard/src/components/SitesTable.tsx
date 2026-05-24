@@ -6,6 +6,7 @@ import type { SiteSummaryRow } from '@/lib/api';
 
 type SortKey = 'visitors' | 'pageviews';
 type FilterTab = 'all' | 'active' | 'inactive';
+type InjectionFilter = 'all' | 'injected' | 'never';
 
 const COUNTRY_NAMES: Record<string, string> = {
   AF:'Afghanistan',AL:'Albania',DZ:'Algeria',AR:'Argentina',AU:'Australia',
@@ -88,6 +89,32 @@ function exportCSV(sites: SiteSummaryRow[]) {
   URL.revokeObjectURL(url);
 }
 
+function InjectionIndicator({ lastInjectedAt }: { lastInjectedAt: string | null }) {
+  if (!lastInjectedAt) {
+    return (
+      <span className="text-[10px] font-mono text-[var(--c-text-3)] border border-[var(--c-border)] px-1.5 py-0.5 rounded" title="Never injected">
+        ?
+      </span>
+    );
+  }
+  const days = Math.floor((Date.now() - new Date(lastInjectedAt).getTime()) / (1000 * 60 * 60 * 24));
+  if (days >= 90) {
+    return (
+      <span className="text-[10px] font-mono text-red-400 border border-red-400/30 px-1.5 py-0.5 rounded" title={`Overdue · ${days}d ago`}>
+        {days}d
+      </span>
+    );
+  }
+  if (days >= 60) {
+    return (
+      <span className="text-[10px] font-mono text-yellow-400 border border-yellow-400/30 px-1.5 py-0.5 rounded" title={`Due soon · ${days}d ago`}>
+        {days}d
+      </span>
+    );
+  }
+  return null;
+}
+
 function StatusBadge({ lastEvent }: { lastEvent: string | null }) {
   if (!lastEvent) {
     return (
@@ -132,6 +159,7 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
   const [sortKey, setSortKey] = useState<SortKey>('visitors');
   const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
   const [filter, setFilter] = useState<FilterTab>('all');
+  const [injectionFilter, setInjectionFilter] = useState<InjectionFilter>('all');
   const [deleting, setDeleting] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [exportConfirm, setExportConfirm] = useState(false);
@@ -150,6 +178,11 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
     .filter(s => {
       if (filter === 'active') return !!s.lastEvent && !isStale(s.lastEvent);
       if (filter === 'inactive') return !s.lastEvent || isStale(s.lastEvent);
+      return true;
+    })
+    .filter(s => {
+      if (injectionFilter === 'injected') return !!s.lastInjectedAt;
+      if (injectionFilter === 'never') return !s.lastInjectedAt;
       return true;
     })
     .filter(s => !query.trim() || s.domain.toLowerCase().includes(query.toLowerCase().trim()))
@@ -204,7 +237,7 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
           </button>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Filter tabs */}
+          {/* Status filter */}
           <div className="flex items-center bg-[var(--c-bg)] border border-[var(--c-border)] rounded-lg p-0.5">
             {(['all', 'active', 'inactive'] as FilterTab[]).map(f => (
               <button
@@ -215,6 +248,25 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
                 }`}
               >
                 {f.charAt(0).toUpperCase() + f.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          {/* Injection filter */}
+          <div className="flex items-center bg-[var(--c-bg)] border border-[var(--c-border)] rounded-lg p-0.5">
+            {([
+              { key: 'all', label: 'All' },
+              { key: 'injected', label: 'Injected' },
+              { key: 'never', label: 'Never injected' },
+            ] as { key: InjectionFilter; label: string }[]).map(f => (
+              <button
+                key={f.key}
+                onClick={() => { setInjectionFilter(f.key); setPage(1); }}
+                className={`px-3 py-1 rounded-md text-xs font-mono transition-colors ${
+                  injectionFilter === f.key ? 'bg-[var(--c-subtle)] text-[var(--c-text)]' : 'text-[var(--c-text-3)] hover:text-[var(--c-text)]'
+                }`}
+              >
+                {f.label}
               </button>
             ))}
           </div>
@@ -391,6 +443,7 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: s.totalPageviews > 0 ? '#34d399' : 'var(--c-border)', boxShadow: s.totalPageviews > 0 ? '0 0 6px #34d399' : 'none' }} />
                       <span className="text-emerald-400 font-mono text-sm group-hover:underline underline-offset-2" title={s.domain}>{s.domain}</span>
+                      <InjectionIndicator lastInjectedAt={s.lastInjectedAt ?? null} />
                     </div>
                   </td>
                   <td className="px-5 py-3.5 text-right font-mono tabular-nums text-[var(--c-text)] text-sm font-semibold tracking-tight">{s.totalVisitors.toLocaleString()}</td>

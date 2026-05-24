@@ -4,6 +4,7 @@ import { TrafficChart } from '@/components/TrafficChart';
 import { SitesTable } from '@/components/SitesTable';
 import { FloatingActions } from '@/components/FloatingActions';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { RotateScriptsButton } from '@/components/RotateScriptsButton';
 
 const PERIODS = [
   { key: 'today', label: 'Today' },
@@ -75,11 +76,14 @@ export default async function HomePage({
         </div>
 
         <div className="bg-[var(--c-card)] border border-[var(--c-border)] rounded-xl overflow-hidden">
-          <div className="px-5 pt-5 pb-4 border-b border-[var(--c-border)]">
-            <h2 className="text-sm font-semibold text-[var(--c-text)]">Traffic — all sites combined</h2>
-            <p className="text-xs text-[var(--c-text-3)] font-mono mt-0.5">
-              Daily totals · {period === '7d' ? '7 days' : period === '30d' ? '30 days' : period === 'month' ? 'this month' : 'today'}
-            </p>
+          <div className="px-5 pt-5 pb-4 border-b border-[var(--c-border)] flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-[var(--c-text)]">Traffic — all sites combined</h2>
+              <p className="text-xs text-[var(--c-text-3)] font-mono mt-0.5">
+                Daily totals · {period === '7d' ? '7 days' : period === '30d' ? '30 days' : period === 'month' ? 'this month' : 'today'}
+              </p>
+            </div>
+            <RotateScriptsButton />
           </div>
           <div className="px-5 pt-4 pb-3 space-y-3">
             {overview.daily.length === 0 ? (
