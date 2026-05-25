@@ -15,6 +15,8 @@ const EnvSchema = z.object({
   // When set, tracker scripts use an absolute endpoint URL instead of relative.
   CF_WORKER_URL: z.string().optional(),
   DISCORD_WEBHOOK_URL: z.string().optional(),
+  // Public-facing API URL used to build lead ingest URLs in tracker scripts.
+  PUBLIC_API_URL: z.string().optional(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

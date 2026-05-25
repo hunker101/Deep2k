@@ -43,6 +43,27 @@ export function adminRouter(db: Db): Router {
     }
   });
 
+  // One-time migration: add leads table
+  router.post('/admin/migrate-leads', async (_req: Request, res: Response) => {
+    try {
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS leads (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          site_id uuid NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+          type text NOT NULL,
+          fields jsonb NOT NULL DEFAULT '{}',
+          page_url text,
+          created_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await db.execute(sql`CREATE INDEX IF NOT EXISTS leads_site_idx ON leads(site_id)`);
+      await db.execute(sql`CREATE INDEX IF NOT EXISTS leads_created_at_idx ON leads(created_at)`);
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: String(err) });
+    }
+  });
+
   // One-time migration: add bounced_visitors column to daily_stats
   router.post('/admin/migrate-last-injected', async (_req: Request, res: Response) => {
     try {

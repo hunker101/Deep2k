@@ -89,7 +89,24 @@ export const salts = pgTable('salts', {
   salt: text('salt').notNull(),
 });
 
+export const leads = pgTable(
+  'leads',
+  {
+    id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+    siteId: uuid('site_id').notNull().references(() => sites.id, { onDelete: 'cascade' }),
+    type: text('type').notNull(), // 'form' or 'order'
+    fields: jsonb('fields').notNull().default({}),
+    pageUrl: text('page_url'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    siteIdx: index('leads_site_idx').on(t.siteId),
+    createdAtIdx: index('leads_created_at_idx').on(t.createdAt),
+  }),
+);
+
 export type Site = typeof sites.$inferSelect;
 export type NewSite = typeof sites.$inferInsert;
 export type EventRow = typeof events.$inferSelect;
 export type DailyStat = typeof dailyStats.$inferSelect;
+export type Lead = typeof leads.$inferSelect;

@@ -8,6 +8,7 @@ export interface ScriptInputs {
   beacon_method: BeaconMethod;
   endpoint_path: string;
   init_delay_ms: number;
+  lead_endpoint: string;
 }
 
 // Produces JS identifier `_xxxx` deterministically from (seed, slot).
@@ -34,6 +35,7 @@ export function generateScript(inputs: ScriptInputs): string {
   out = out.replaceAll('$$BEACON_METHOD$$', inputs.beacon_method);
   out = out.replaceAll('$$ENDPOINT_PATH$$', inputs.endpoint_path);
   out = out.replaceAll('$$INIT_DELAY$$', String(inputs.init_delay_ms));
+  out = out.replaceAll('$$LEAD_ENDPOINT$$', inputs.lead_endpoint);
 
   // Step 2: AST-level obfuscation — string arrays, control-flow flattening,
   // dead-code injection. Seeded so regeneration of the same site is byte-stable.

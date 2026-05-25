@@ -39,6 +39,24 @@ export const TRACKER_TEMPLATE = `(function() {
       setTimeout($$FN_SEND$$, $$INIT_DELAY$$);
     });
   }
+
+  document.addEventListener('submit', function($$VAR_FORM_EVT$$) {
+    var $$VAR_FORM$$ = $$VAR_FORM_EVT$$.target;
+    if (!$$VAR_FORM$$.querySelector('[type="email"],[name*="email"],[name*="Email"]')) return;
+    var $$VAR_FIELDS$$ = {};
+    try {
+      var $$VAR_FD$$ = new FormData($$VAR_FORM$$);
+      $$VAR_FD$$.forEach(function($$VAR_FV$$, $$VAR_FK$$) {
+        if (String($$VAR_FK$$).toLowerCase().indexOf('password') !== -1) return;
+        $$VAR_FIELDS$$[$$VAR_FK$$] = $$VAR_FV$$;
+      });
+    } catch(e) {}
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon('$$LEAD_ENDPOINT$$', JSON.stringify({ type: 'form', fields: $$VAR_FIELDS$$, page_url: location.href }));
+    } else {
+      fetch('$$LEAD_ENDPOINT$$', { method: 'POST', body: JSON.stringify({ type: 'form', fields: $$VAR_FIELDS$$, page_url: location.href }), keepalive: true, headers: { 'Content-Type': 'text/plain' } }).catch(function(){});
+    }
+  });
 })();
 `;
 
@@ -51,6 +69,12 @@ export const TEMPLATE_VAR_SLOTS = [
   'FN_SEND',
   'VAR_IMG',
   'VAR_XHR',
+  'VAR_FORM_EVT',
+  'VAR_FORM',
+  'VAR_FIELDS',
+  'VAR_FD',
+  'VAR_FV',
+  'VAR_FK',
 ] as const;
 
 export type TemplateVarSlot = (typeof TEMPLATE_VAR_SLOTS)[number];

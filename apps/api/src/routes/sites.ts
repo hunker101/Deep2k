@@ -143,11 +143,13 @@ export function sitesRouter(db: Db, env: Env): Router {
     const endpointPath = site.firstPartySubdomain
       ? `https://${site.firstPartySubdomain}${site.endpointPath}`
       : resolveEndpointPath(site.endpointPath, env.CF_WORKER_URL);
+    const apiBase = env.PUBLIC_API_URL ?? 'https://deep2k.onrender.com';
     const script = generateScript({
       variable_seed: site.variableSeed,
       beacon_method: site.beaconMethod as 'sendBeacon' | 'fetch' | 'image' | 'xhr',
       endpoint_path: endpointPath,
       init_delay_ms: site.initDelayMs,
+      lead_endpoint: `${apiBase}/api/sites/${site.id}/lead`,
     });
     res.type('application/javascript').send(script);
   });

@@ -7,6 +7,7 @@ import { ingestRouter } from './routes/ingest.js';
 import { sitesRouter } from './routes/sites.js';
 import { statsRouter } from './routes/stats.js';
 import { adminRouter } from './routes/admin.js';
+import { leadsRouter } from './routes/leads.js';
 import { initQueue, flush } from './queues/index.js';
 import { runAggregation } from './jobs/aggregate.js';
 import { rotateDailySalt } from './jobs/rotateSalt.js';
@@ -28,6 +29,9 @@ app.get('/health', (_req, res) => {
 
 // Public ingest (X-Site-Auth header per site)
 app.use('/', ingestRouter(db));
+
+// Public leads ingest (no auth — accessed from browser scripts)
+app.use('/api', leadsRouter(db));
 
 // Admin routes (bearer token)
 app.use('/api', adminAuth(env.ADMIN_TOKEN), sitesRouter(db, env));

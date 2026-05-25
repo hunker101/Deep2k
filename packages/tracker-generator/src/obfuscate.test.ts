@@ -5,6 +5,7 @@ const baseInputs = {
   beacon_method: 'sendBeacon',
   endpoint_path: '/_/p',
   init_delay_ms: 500,
+  lead_endpoint: 'https://deep2k.onrender.com/api/sites/test/lead',
 } as const;
 
 describe('generateScript', () => {
@@ -31,6 +32,7 @@ describe('generateScript', () => {
       beacon_method: 'fetch',
       endpoint_path: '/api/r',
       init_delay_ms: 750,
+      lead_endpoint: 'https://deep2k.onrender.com/api/sites/test/lead',
     });
     expect(out).toContain("'fetch'");
     expect(out).toContain('/api/r');
