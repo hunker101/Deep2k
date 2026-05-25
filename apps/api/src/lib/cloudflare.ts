@@ -30,7 +30,7 @@ async function kvPut(creds: CfCreds, key: string, value: object): Promise<void> 
   }
 }
 
-export async function pushSiteToKV(domain: string, config: WorkerSiteConfig): Promise<void> {
+export async function pushSiteToKV(domain: string, config: WorkerSiteConfig, firstPartySubdomain?: string | null): Promise<void> {
   const creds = getCreds();
   if (!creds) {
     console.log('[cf-kv] credentials not set — skipping KV push (dev mode)');
@@ -54,10 +54,15 @@ export async function pushSiteToKV(domain: string, config: WorkerSiteConfig): Pr
     }
   }
 
+  // Store under the first-party subdomain so beacons routed via that CNAME resolve correctly.
+  if (firstPartySubdomain) {
+    await kvPut(creds, `${firstPartySubdomain}:${endpointPath}`, config);
+  }
+
   console.log(`[cf-kv] pushed site config for ${domain} to SITES_KV`);
 }
 
-export async function deleteSiteFromKV(domain: string, endpointPath: string): Promise<void> {
+export async function deleteSiteFromKV(domain: string, endpointPath: string, firstPartySubdomain?: string | null): Promise<void> {
   const creds = getCreds();
   if (!creds) return;
 
@@ -73,6 +78,10 @@ export async function deleteSiteFromKV(domain: string, endpointPath: string): Pr
     if (workerHost !== domain) {
       keysToDelete.push(`${workerHost}:${pathname}`);
     }
+  }
+
+  if (firstPartySubdomain) {
+    keysToDelete.push(`${firstPartySubdomain}:${pathname}`);
   }
 
   await Promise.all(keysToDelete.map(key => {

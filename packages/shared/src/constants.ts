@@ -35,6 +35,29 @@ export const ENDPOINT_PATH_POOL = [
   '/c/p',
 ] as const;
 
+export const SUBDOMAIN_PREFIX_POOL = [
+  'metrics',
+  'data',
+  'insights',
+  'statistics',
+  'reporting',
+  'intelligence',
+  'measurement',
+  'tracking',
+  'evaluation',
+  'assessment',
+  'diagnostics',
+  'benchmarking',
+  'performance',
+  'monitoring',
+  'analysis',
+  'signals',
+  'observe',
+  'pulse',
+  'trends',
+  'forecast',
+] as const;
+
 export const DEVICE_TYPES = ['mobile', 'tablet', 'desktop'] as const;
 export type Device = (typeof DEVICE_TYPES)[number];
 

@@ -3,6 +3,7 @@ import { fetchSiteStats, fetchLastEvent, fetchSites } from '@/lib/api';
 import { TrafficChart } from '@/components/TrafficChart';
 import { CopyButton } from '@/components/CopyButton';
 import { GetScriptButton } from '@/components/GetScriptModal';
+import { EnableFirstPartyButton } from '@/components/EnableFirstPartyButton';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import type { DailyStatRow, SiteRow } from '@/lib/api';
 
@@ -279,6 +280,9 @@ export default async function SitePage({
                 </span>
               </ConfigRow>
               <ConfigRow label="Last event received" value={lastEventLabel} mono />
+              <ConfigRow label="First-party beacon">
+                <EnableFirstPartyButton siteId={site.id} initialSubdomain={site.firstPartySubdomain ?? null} />
+              </ConfigRow>
             </div>
           ) : (
             <div className="p-6 text-xs font-mono text-[var(--c-text-2)]">Site not found</div>

@@ -53,6 +53,16 @@ export function adminRouter(db: Db): Router {
     }
   });
 
+  // One-time migration: add first_party_subdomain column to sites
+  router.post('/admin/migrate-first-party-subdomain', async (_req: Request, res: Response) => {
+    try {
+      await db.execute(sql`ALTER TABLE sites ADD COLUMN IF NOT EXISTS first_party_subdomain text`);
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: String(err) });
+    }
+  });
+
   router.post('/admin/migrate-bounce', async (_req: Request, res: Response) => {
     try {
       await db.execute(sql`ALTER TABLE daily_stats ADD COLUMN IF NOT EXISTS bounced_visitors integer NOT NULL DEFAULT 0`);

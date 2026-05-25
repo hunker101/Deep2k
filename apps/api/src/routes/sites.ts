@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { eq } from 'drizzle-orm';
 import { sites, type Db } from '@deep2k/db';
 import { generateScript, generateSiteConfig } from '@deep2k/tracker-generator';
+import { SUBDOMAIN_PREFIX_POOL } from '@deep2k/shared';
 import type { Env } from '../env.js';
 import { pushSiteToKV, deleteSiteFromKV } from '../lib/cloudflare.js';
 
@@ -78,7 +79,7 @@ export function sitesRouter(db: Db, env: Env): Router {
     const id = req.params.id ?? '';
     const [row] = await db.delete(sites).where(eq(sites.id, id)).returning();
     if (!row) { res.status(404).end(); return; }
-    await deleteSiteFromKV(row.domain, row.endpointPath).catch((err: unknown) => console.error('[cf-kv] delete failed:', err));
+    await deleteSiteFromKV(row.domain, row.endpointPath, row.firstPartySubdomain).catch((err: unknown) => console.error('[cf-kv] delete failed:', err));
     res.status(204).end();
   });
 
@@ -100,6 +101,28 @@ export function sitesRouter(db: Db, env: Env): Router {
     res.json(row);
   });
 
+  router.post('/sites/:id/enable-first-party', async (req: Request, res: Response) => {
+    const id = req.params.id ?? '';
+    const [site] = await db.select().from(sites).where(eq(sites.id, id));
+    if (!site) { res.status(404).end(); return; }
+
+    const pool = SUBDOMAIN_PREFIX_POOL as readonly string[];
+    const prefix = pool[Math.floor(Math.random() * pool.length)]!;
+    const firstPartySubdomain = `${prefix}.${site.domain}`;
+
+    const [updated] = await db.update(sites).set({ firstPartySubdomain }).where(eq(sites.id, id)).returning();
+    if (!updated) { res.status(404).end(); return; }
+
+    await pushSiteToKV(site.domain, {
+      id: site.id,
+      secret: site.secret,
+      endpoint_path: site.endpointPath,
+      backend_url: site.backendUrl,
+    }, firstPartySubdomain).catch(err => console.error('[cf-kv] enable-first-party push failed:', err));
+
+    res.json({ firstPartySubdomain });
+  });
+
   router.post('/sites/:id/mark-injected', async (req: Request, res: Response) => {
     const id = req.params.id ?? '';
     const [row] = await db.update(sites).set({ lastInjectedAt: new Date() }).where(eq(sites.id, id)).returning();
@@ -113,7 +136,9 @@ export function sitesRouter(db: Db, env: Env): Router {
     });
     if (!site) { res.status(404).end(); return; }
 
-    const endpointPath = resolveEndpointPath(site.endpointPath, env.CF_WORKER_URL);
+    const endpointPath = site.firstPartySubdomain
+      ? `https://${site.firstPartySubdomain}${site.endpointPath}`
+      : resolveEndpointPath(site.endpointPath, env.CF_WORKER_URL);
     const script = generateScript({
       variable_seed: site.variableSeed,
       beacon_method: site.beaconMethod as 'sendBeacon' | 'fetch' | 'image' | 'xhr',
