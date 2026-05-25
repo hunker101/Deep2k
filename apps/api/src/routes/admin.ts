@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import type { Db } from '@deep2k/db';
-import { sites } from '@deep2k/db';
-import { eq, sql } from 'drizzle-orm';
+import { sites, leads } from '@deep2k/db';
+import { and, eq, gte, lte, sql } from 'drizzle-orm';
 import { runAggregation } from '../jobs/aggregate.js';
 import { createPartitions } from '../jobs/createPartitions.js';
 import { flush } from '../queues/index.js';
@@ -241,6 +241,30 @@ export function adminRouter(db: Db): Router {
     } catch (err) {
       res.status(500).json({ ok: false, error: String(err) });
     }
+  });
+
+  router.get('/leads', async (req: Request, res: Response) => {
+    const { from, to, type, site_id } = req.query as Record<string, string>;
+    const conditions = [];
+    if (from) conditions.push(gte(leads.createdAt, new Date(from)));
+    if (to) conditions.push(lte(leads.createdAt, new Date(`${to}T23:59:59Z`)));
+    if (type) conditions.push(eq(leads.type, type));
+    if (site_id) conditions.push(eq(leads.siteId, site_id));
+    const rows = await db
+      .select({
+        id: leads.id,
+        siteId: leads.siteId,
+        domain: sites.domain,
+        type: leads.type,
+        fields: leads.fields,
+        pageUrl: leads.pageUrl,
+        createdAt: leads.createdAt,
+      })
+      .from(leads)
+      .innerJoin(sites, eq(leads.siteId, sites.id))
+      .where(conditions.length ? and(...conditions) : undefined)
+      .orderBy(leads.createdAt);
+    res.json(rows);
   });
 
   return router;

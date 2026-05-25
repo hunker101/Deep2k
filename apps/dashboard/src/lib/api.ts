@@ -113,3 +113,29 @@ export async function fetchLastEvent(id: string): Promise<string | null> {
   const data = await res.json() as { lastEvent: string | null };
   return data.lastEvent;
 }
+
+export interface LeadRow {
+  id: string;
+  siteId: string;
+  domain?: string;
+  type: 'form' | 'order';
+  fields: Record<string, unknown>;
+  pageUrl: string | null;
+  createdAt: string;
+}
+
+export async function fetchLeads(period = '7d', type?: string): Promise<LeadRow[]> {
+  const params = dateRangeParams(period);
+  if (type) params.set('type', type);
+  const res = await fetch(`${apiBase()}/api/leads?${params}`, { headers: adminHeaders(), cache: 'no-store' });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function fetchSiteLeads(id: string, period = '7d', type?: string): Promise<LeadRow[]> {
+  const params = dateRangeParams(period);
+  if (type) params.set('type', type);
+  const res = await fetch(`${apiBase()}/api/sites/${id}/leads?${params}`, { headers: adminHeaders(), cache: 'no-store' });
+  if (!res.ok) return [];
+  return res.json();
+}

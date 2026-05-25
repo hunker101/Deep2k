@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
-import { eq } from 'drizzle-orm';
-import { sites, type Db } from '@deep2k/db';
+import { and, eq, gte, lte } from 'drizzle-orm';
+import { sites, leads, type Db } from '@deep2k/db';
 import { generateScript, generateSiteConfig } from '@deep2k/tracker-generator';
 import { SUBDOMAIN_PREFIX_POOL } from '@deep2k/shared';
 import type { Env } from '../env.js';
@@ -132,6 +132,17 @@ export function sitesRouter(db: Db, env: Env): Router {
     const [row] = await db.update(sites).set({ lastInjectedAt: new Date() }).where(eq(sites.id, id)).returning();
     if (!row) { res.status(404).end(); return; }
     res.json({ lastInjectedAt: row.lastInjectedAt });
+  });
+
+  router.get('/sites/:id/leads', async (req: Request, res: Response) => {
+    const id = req.params.id ?? '';
+    const { from, to, type } = req.query as Record<string, string>;
+    const conditions = [eq(leads.siteId, id)];
+    if (from) conditions.push(gte(leads.createdAt, new Date(from)));
+    if (to) conditions.push(lte(leads.createdAt, new Date(`${to}T23:59:59Z`)));
+    if (type) conditions.push(eq(leads.type, type));
+    const rows = await db.select().from(leads).where(and(...conditions)).orderBy(leads.createdAt);
+    res.json(rows);
   });
 
   router.get('/sites/:id/script', async (req: Request, res: Response) => {

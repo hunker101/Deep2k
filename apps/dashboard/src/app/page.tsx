@@ -32,11 +32,21 @@ export default async function HomePage({
     <div className="min-h-screen bg-[var(--c-bg)]">
       {/* Top nav */}
       <header className="border-b border-[var(--c-border)] px-6 py-3 flex items-center justify-between sticky top-0 z-30" style={{ backgroundColor: 'var(--c-header-bg)', backdropFilter: 'blur(8px)' }}>
-        <div className="flex items-center gap-2">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-          </svg>
-          <span className="text-[var(--c-text)] font-semibold">Deep<span className="text-emerald-400">2K</span></span>
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+            <span className="text-[var(--c-text)] font-semibold">Deep<span className="text-emerald-400">2K</span></span>
+          </div>
+          <nav className="flex items-center gap-1 bg-[var(--c-card)] border border-[var(--c-border)] rounded-lg p-1">
+            <Link href="/" className="px-3 py-1.5 rounded-md text-xs font-mono bg-[var(--c-subtle)] text-[var(--c-text)] transition-colors">
+              Analytics
+            </Link>
+            <Link href="/leads" className="px-3 py-1.5 rounded-md text-xs font-mono text-[var(--c-text-2)] hover:text-[var(--c-text)] transition-colors">
+              Leads
+            </Link>
+          </nav>
         </div>
 
         <div className="flex items-center gap-3">

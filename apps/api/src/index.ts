@@ -22,6 +22,7 @@ initQueue(db);
 
 const app = express();
 app.use(express.json({ limit: MAX_PAYLOAD_BYTES }));
+app.use(express.text({ type: 'text/plain', limit: MAX_PAYLOAD_BYTES }));
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true });

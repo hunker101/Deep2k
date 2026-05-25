@@ -283,6 +283,11 @@ export default async function SitePage({
               <ConfigRow label="First-party beacon">
                 <EnableFirstPartyButton siteId={site.id} initialSubdomain={site.firstPartySubdomain ?? null} />
               </ConfigRow>
+              <ConfigRow label="Leads">
+                <Link href={`/leads?site=${site.id}`} className="text-xs font-mono text-emerald-400 hover:text-emerald-300 transition-colors">
+                  View leads →
+                </Link>
+              </ConfigRow>
             </div>
           ) : (
             <div className="p-6 text-xs font-mono text-[var(--c-text-2)]">Site not found</div>
