@@ -9,6 +9,7 @@ interface CreatedSite {
   scriptPath: string;
   endpointPath: string;
   beaconMethod: string;
+  firstPartySubdomain: string;
   script: string;
 }
 
@@ -97,8 +98,7 @@ export function AddSiteModal({ onClose, onCreated }: { onClose: () => void; onCr
               </div>
 
               <div className="bg-[var(--c-deep)] border border-[var(--c-border)] rounded-xl divide-y divide-[var(--c-border)]">
-                <InfoRow label="Script path"   value={created.scriptPath}   field="script"   copiedField={copiedField} onCopy={() => copy(created.scriptPath, 'script')} />
-                <InfoRow label="Endpoint path" value={created.endpointPath} field="endpoint" copiedField={copiedField} onCopy={() => copy(created.endpointPath, 'endpoint')} />
+                <InfoRow label="First-party subdomain" value={created.firstPartySubdomain} field="subdomain" copiedField={copiedField} onCopy={() => copy(created.firstPartySubdomain, 'subdomain')} />
                 <div className="flex items-center justify-between px-4 py-3">
                   <span className="text-xs font-mono text-[var(--c-text-2)]">Tracker script</span>
                   <button
@@ -111,6 +111,12 @@ export function AddSiteModal({ onClose, onCreated }: { onClose: () => void; onCr
                     }
                   </button>
                 </div>
+              </div>
+
+              <div className="bg-[var(--c-deep)] border border-[var(--c-border)] rounded-xl p-4 space-y-1.5 text-xs font-mono text-[var(--c-text-2)]">
+                <p className="text-[var(--c-text)] font-semibold text-xs mb-2.5">Cloudflare setup</p>
+                <p>a.  DNS → Add CNAME: <span className="text-emerald-400">{created.firstPartySubdomain.split('.')[0]}</span> → <span className="text-emerald-400">deep2k-worker.vantatech.workers.dev</span> (Proxied)</p>
+                <p>b.  Workers Routes → Add route: <span className="text-emerald-400">{created.firstPartySubdomain}/*</span> → <span className="text-emerald-400">deep2k-proxy</span></p>
               </div>
 
               <div className="bg-[var(--c-deep)] border border-[var(--c-border)] rounded-xl p-4 space-y-1.5 text-xs font-mono text-[var(--c-text-2)]">

@@ -41,6 +41,9 @@ export function sitesRouter(db: Db, env: Env): Router {
     }
 
     const cfg = generateSiteConfig(parsed.data.domain);
+    const pool = SUBDOMAIN_PREFIX_POOL as readonly string[];
+    const prefix = pool[Math.floor(Math.random() * pool.length)]!;
+    const firstPartySubdomain = `${prefix}.${parsed.data.domain}`;
     try {
       const [row] = await db
         .insert(sites)
@@ -53,6 +56,7 @@ export function sitesRouter(db: Db, env: Env): Router {
           initDelayMs: cfg.init_delay_ms,
           variableSeed: cfg.variable_seed,
           backendUrl: pickBackendUrl(env.BACKEND_URLS),
+          firstPartySubdomain,
         })
         .returning();
 
@@ -63,7 +67,7 @@ export function sitesRouter(db: Db, env: Env): Router {
         secret: cfg.secret,
         endpoint_path: endpointForWorker,
         backend_url: row!.backendUrl,
-      }).catch(err => console.error('[cf-kv] push failed:', err));
+      }, firstPartySubdomain).catch(err => console.error('[cf-kv] push failed:', err));
 
       res.status(201).json({ ...row, scriptEndpoint: endpointForWorker });
     } catch (err) {
