@@ -110,7 +110,7 @@ export function adminRouter(db: Db): Router {
             secret: row.secret,
             endpoint_path: endpointPath,
             backend_url: row.backendUrl,
-          });
+          }, row.firstPartySubdomain);
           results.push({ domain: row.domain, status: 'ok' });
         } catch (err) {
           results.push({ domain: row.domain, status: `error: ${String(err)}` });
