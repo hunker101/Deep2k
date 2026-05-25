@@ -3,13 +3,6 @@ import { fetchLeads } from '@/lib/api';
 import { LeadsTable } from '@/components/LeadsTable';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
-const PERIODS = [
-  { key: 'today', label: 'Today' },
-  { key: '7d', label: 'Last 7 Days' },
-  { key: '30d', label: 'Last 30 Days' },
-  { key: 'month', label: 'This Month' },
-];
-
 export default async function LeadsPage({
   searchParams,
 }: {
@@ -21,6 +14,10 @@ export default async function LeadsPage({
   const orders = leads.filter(l => l.type === 'order').length;
   const forms = leads.filter(l => l.type === 'form').length;
   const activeSites = new Set(leads.map(l => l.siteId)).size;
+
+  const today = new Date().toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+  });
 
   return (
     <div className="min-h-screen bg-[var(--c-bg)]">
@@ -42,6 +39,7 @@ export default async function LeadsPage({
           </nav>
         </div>
         <div className="flex items-center gap-3">
+          <span className="text-[var(--c-text-3)] text-xs font-mono hidden sm:block">{today}</span>
           <ThemeToggle />
           <a href="/api/logout" className="flex items-center gap-1.5 text-[var(--c-text-2)] hover:text-red-400 border border-transparent hover:border-red-400/20 hover:bg-red-400/5 text-xs font-mono px-3 py-1.5 rounded-lg transition-all">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -55,50 +53,55 @@ export default async function LeadsPage({
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-[var(--c-text)]">Leads</h1>
-            <p className="text-[var(--c-text-2)] text-sm font-mono mt-0.5">
-              Customer actions across all stores
-            </p>
-          </div>
-          <div className="flex items-center gap-1 bg-[var(--c-card)] border border-[var(--c-border)] rounded-lg p-1">
-            {PERIODS.map(p => (
-              <Link
-                key={p.key}
-                href={`/leads?period=${p.key}`}
-                className={`px-3 py-1.5 rounded-md text-xs font-mono transition-colors ${
-                  period === p.key
-                    ? 'bg-[var(--c-subtle)] text-[var(--c-text)]'
-                    : 'text-[var(--c-text-2)] hover:text-[var(--c-text)]'
-                }`}
-              >
-                {p.label}
-              </Link>
-            ))}
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--c-text)]">All leads</h1>
+          <p className="text-[var(--c-text-2)] text-sm font-mono mt-0.5">
+            Orders and form submissions captured across{' '}
+            <span className="text-[var(--c-text)]">{activeSites}</span> sites.{' '}
+            <span className="text-emerald-400">● Live</span>
+          </p>
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard label="Total leads" value={leads.length} />
-          <StatCard label="Orders" value={orders} accent />
-          <StatCard label="Form submissions" value={forms} />
-          <StatCard label="Active sites" value={activeSites} />
+          <StatCard label="Total Leads" value={leads.length} />
+          <StatCard label="Total Orders" value={orders} badge="order" />
+          <StatCard label="Form Submissions" value={forms} badge="form" />
+          <StatCard label="Sites with Leads" value={activeSites} note="active in last day" />
         </div>
 
-        <LeadsTable leads={leads} showDomain />
+        <LeadsTable leads={leads} showDomain period={period} />
       </main>
     </div>
   );
 }
 
-function StatCard({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
+function StatCard({
+  label,
+  value,
+  badge,
+  note,
+}: {
+  label: string;
+  value: number;
+  badge?: 'order' | 'form';
+  note?: string;
+}) {
   return (
     <div className="bg-[var(--c-card)] border border-[var(--c-border)] rounded-xl p-5">
-      <p className="text-xs font-mono text-[var(--c-text-2)] uppercase tracking-wide mb-2">{label}</p>
-      <p className={`text-3xl font-bold tabular-nums ${accent ? 'text-emerald-400' : 'text-[var(--c-text)]'}`}>
-        {value.toLocaleString()}
-      </p>
+      <p className="text-[10px] font-mono text-[var(--c-text-3)] uppercase tracking-widest mb-3">{label}</p>
+      <div className="flex items-center gap-2">
+        <p className="text-3xl font-bold tabular-nums text-[var(--c-text)]">{value.toLocaleString()}</p>
+        {badge && (
+          <span className={`inline-flex items-center text-[10px] font-mono px-2 py-0.5 rounded border ${
+            badge === 'order'
+              ? 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20'
+              : 'bg-blue-400/10 text-blue-400 border-blue-400/20'
+          }`}>
+            {badge}
+          </span>
+        )}
+      </div>
+      {note && <p className="text-xs font-mono text-[var(--c-text-3)] mt-1">{note}</p>}
     </div>
   );
 }
