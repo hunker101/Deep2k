@@ -131,6 +131,13 @@ export function sitesRouter(db: Db, env: Env): Router {
     const id = req.params.id ?? '';
     const [row] = await db.update(sites).set({ lastInjectedAt: new Date() }).where(eq(sites.id, id)).returning();
     if (!row) { res.status(404).end(); return; }
+    const endpointPath = resolveEndpointPath(row.endpointPath, env.CF_WORKER_URL);
+    pushSiteToKV(row.domain, {
+      id: row.id,
+      secret: row.secret,
+      endpoint_path: endpointPath,
+      backend_url: row.backendUrl,
+    }, row.firstPartySubdomain).catch(err => console.error('[cf-kv] mark-injected push failed:', err));
     res.json({ lastInjectedAt: row.lastInjectedAt });
   });
 
