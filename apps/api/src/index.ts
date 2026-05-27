@@ -23,6 +23,8 @@ const db = getDb(env.DATABASE_URL);
 initQueue(db);
 
 const app = express();
+// Shopify webhooks can be large (full order payload) — allow up to 1MB for webhook routes.
+app.use('/api/sites', express.json({ limit: '1mb' }));
 app.use(express.json({ limit: MAX_PAYLOAD_BYTES }));
 app.use(express.text({ type: 'text/plain', limit: MAX_PAYLOAD_BYTES }));
 
