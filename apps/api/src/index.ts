@@ -14,6 +14,7 @@ import { rotateDailySalt } from './jobs/rotateSalt.js';
 import { sendDiscordReport } from './jobs/discordReport.js';
 import { createPartitions } from './jobs/createPartitions.js';
 import { pruneOldEvents } from './jobs/pruneEvents.js';
+import { resyncKv } from './jobs/resyncKv.js';
 import { MAX_PAYLOAD_BYTES } from '@deep2k/shared';
 
 const env = loadEnv();
@@ -74,6 +75,22 @@ const partitionTask = cron.schedule('0 12 25 * *', async () => {
 // Also create partitions on startup so a fresh deploy is always ahead.
 createPartitions(db, 3).catch(err => console.error('[startup] partition creation failed:', err));
 
+// Hourly KV resync at :15 — keeps Cloudflare SITES_KV in sync with DB.
+const resyncKvTask = cron.schedule('15 * * * *', async () => {
+  console.log('[cron] resync-kv starting');
+  try {
+    const { synced, errors } = await resyncKv(db, env.CF_WORKER_URL);
+    console.log(`[cron] resync-kv done, ${synced} synced, ${errors} errors`);
+  } catch (err) {
+    console.error('[cron] resync-kv failed:', err);
+  }
+});
+
+// Also resync KV on startup so a fresh deploy immediately fixes any drift.
+resyncKv(db, env.CF_WORKER_URL)
+  .then(({ synced, errors }) => console.log(`[startup] resync-kv done, ${synced} synced, ${errors} errors`))
+  .catch(err => console.error('[startup] resync-kv failed:', err));
+
 // Nightly event pruning at 2am UTC — deletes raw events older than 90 days.
 const pruneTask = cron.schedule('0 2 * * *', async () => {
   console.log('[cron] event pruning starting');
@@ -110,6 +127,7 @@ async function shutdown(signal: string): Promise<void> {
   discordReportTask.stop();
   partitionTask.stop();
   pruneTask.stop();
+  resyncKvTask.stop();
   await flush();
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(0), 5000).unref();
