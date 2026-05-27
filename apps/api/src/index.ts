@@ -8,6 +8,7 @@ import { sitesRouter } from './routes/sites.js';
 import { statsRouter } from './routes/stats.js';
 import { adminRouter } from './routes/admin.js';
 import { leadsRouter } from './routes/leads.js';
+import { webhooksRouter } from './routes/webhooks.js';
 import { initQueue, flush } from './queues/index.js';
 import { runAggregation } from './jobs/aggregate.js';
 import { rotateDailySalt } from './jobs/rotateSalt.js';
@@ -34,6 +35,9 @@ app.use('/', ingestRouter(db));
 
 // Public leads ingest (no auth — accessed from browser scripts)
 app.use('/api', leadsRouter(db));
+
+// Public webhook ingest (no auth — Shopify server-to-server, site UUID provides entropy)
+app.use('/api', webhooksRouter(db));
 
 // Admin routes (bearer token)
 app.use('/api', adminAuth(env.ADMIN_TOKEN), sitesRouter(db, env));
