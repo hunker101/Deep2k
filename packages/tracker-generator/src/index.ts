@@ -1,10 +1,9 @@
 import type { BeaconMethod } from '@deep2k/shared';
-import { generateScript } from './obfuscate.js';
 import {
   generateSecret,
   generateVariableSeed,
+  generateEndpointPath,
   pickBeaconMethod,
-  pickEndpointPath,
   pickInitDelayMs,
   pickScriptPath,
 } from './pools.js';
@@ -21,12 +20,14 @@ export interface NewSiteConfig {
 
 // Build a fresh randomized config for a new site. ID and backend_url are
 // assigned by the persistence layer.
+// Note: endpoint_path here is a candidate only — the API layer must check DB
+// uniqueness and call generateEndpointPath() until a free path is found.
 export function generateSiteConfig(domain: string): NewSiteConfig {
   return {
     domain,
     secret: generateSecret(),
     script_path: pickScriptPath(),
-    endpoint_path: pickEndpointPath(),
+    endpoint_path: generateEndpointPath(),
     beacon_method: pickBeaconMethod(),
     init_delay_ms: pickInitDelayMs(),
     variable_seed: generateVariableSeed(),
@@ -35,4 +36,4 @@ export function generateSiteConfig(domain: string): NewSiteConfig {
 
 export { generateScript } from './obfuscate.js';
 export type { ScriptInputs } from './obfuscate.js';
-export { generateVariableSeed, pickBeaconMethod, pickInitDelayMs } from './pools.js';
+export { generateVariableSeed, pickBeaconMethod, pickInitDelayMs, generateEndpointPath } from './pools.js';

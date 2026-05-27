@@ -12,6 +12,8 @@ export const SCRIPT_PATH_POOL = [
   '/static/c.js',
 ] as const;
 
+// Legacy fixed pool — kept only for the fix-collisions migration tool.
+// New sites use generateUniqueEndpointPath() in the API instead of this pool.
 export const ENDPOINT_PATH_POOL = [
   '/_/p',
   '/c/v',

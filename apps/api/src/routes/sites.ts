@@ -2,7 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import { and, eq, gte, lte } from 'drizzle-orm';
 import { sites, leads, type Db } from '@deep2k/db';
-import { generateScript, generateSiteConfig } from '@deep2k/tracker-generator';
+import { generateScript, generateSiteConfig, generateEndpointPath } from '@deep2k/tracker-generator';
 import { SUBDOMAIN_PREFIX_POOL } from '@deep2k/shared';
 import type { Env } from '../env.js';
 import { pushSiteToKV, deleteSiteFromKV } from '../lib/cloudflare.js';
@@ -41,8 +41,25 @@ export function sitesRouter(db: Db, env: Env): Router {
     }
 
     const cfg = generateSiteConfig(parsed.data.domain);
-    const pool = SUBDOMAIN_PREFIX_POOL as readonly string[];
-    const prefix = pool[Math.floor(Math.random() * pool.length)]!;
+
+    // Generate an endpoint path guaranteed not already used by another site.
+    // ~16M combinations means collision probability is <0.01%; retry loop handles it.
+    const usedPaths = new Set(
+      (await db.select({ endpointPath: sites.endpointPath }).from(sites)).map(r => r.endpointPath)
+    );
+    let uniqueEndpointPath: string;
+    let attempts = 0;
+    do {
+      uniqueEndpointPath = generateEndpointPath();
+      attempts++;
+      if (attempts > 100) {
+        res.status(500).json({ error: 'could not generate unique endpoint path' });
+        return;
+      }
+    } while (usedPaths.has(uniqueEndpointPath));
+
+    const subdomainPool = SUBDOMAIN_PREFIX_POOL as readonly string[];
+    const prefix = subdomainPool[Math.floor(Math.random() * subdomainPool.length)]!;
     const firstPartySubdomain = `${prefix}.${parsed.data.domain}`;
     try {
       const [row] = await db
@@ -51,7 +68,7 @@ export function sitesRouter(db: Db, env: Env): Router {
           domain: cfg.domain,
           secret: cfg.secret,
           scriptPath: cfg.script_path,
-          endpointPath: cfg.endpoint_path,
+          endpointPath: uniqueEndpointPath,
           beaconMethod: cfg.beacon_method,
           initDelayMs: cfg.init_delay_ms,
           variableSeed: cfg.variable_seed,
@@ -61,7 +78,7 @@ export function sitesRouter(db: Db, env: Env): Router {
         .returning();
 
       // Push to Cloudflare KV so Worker picks it up without redeploy.
-      const endpointForWorker = resolveEndpointPath(cfg.endpoint_path, env.CF_WORKER_URL);
+      const endpointForWorker = resolveEndpointPath(uniqueEndpointPath, env.CF_WORKER_URL);
       await pushSiteToKV(cfg.domain, {
         id: row!.id,
         secret: cfg.secret,

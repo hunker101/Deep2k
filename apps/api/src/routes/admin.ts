@@ -7,8 +7,7 @@ import { createPartitions } from '../jobs/createPartitions.js';
 import { flush } from '../queues/index.js';
 import { sendDiscordReport } from '../jobs/discordReport.js';
 import { pushSiteToKV } from '../lib/cloudflare.js';
-import { generateVariableSeed, pickBeaconMethod, pickInitDelayMs } from '@deep2k/tracker-generator';
-import { ENDPOINT_PATH_POOL } from '@deep2k/shared';
+import { generateVariableSeed, pickBeaconMethod, pickInitDelayMs, generateEndpointPath } from '@deep2k/tracker-generator';
 
 export function adminRouter(db: Db): Router {
   const router = Router();
@@ -158,7 +157,6 @@ export function adminRouter(db: Db): Router {
       }
 
       const usedPaths = new Set(rows.map(r => r.endpointPath));
-      const availablePaths = (ENDPOINT_PATH_POOL as readonly string[]).filter(p => !usedPaths.has(p));
 
       const fixes: { domain: string; oldPath: string; newPath: string; status: string }[] = [];
 
@@ -167,11 +165,13 @@ export function adminRouter(db: Db): Router {
         // Keep first site on current path; re-assign the rest
         for (let i = 1; i < group.length; i++) {
           const site = group[i]!;
-          const newPath = availablePaths.shift();
-          if (!newPath) {
-            fixes.push({ domain: site.domain, oldPath: path, newPath: '', status: 'error: pool exhausted' });
-            continue;
-          }
+          // Generate a unique path not already in use
+          let newPath: string;
+          let attempts = 0;
+          do {
+            newPath = generateEndpointPath();
+            attempts++;
+          } while (usedPaths.has(newPath) && attempts < 100);
           usedPaths.add(newPath);
           await db.update(sites).set({ endpointPath: newPath }).where(eq(sites.id, site.id));
           await pushSiteToKV(site.domain, {
