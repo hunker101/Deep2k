@@ -166,7 +166,7 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
   const [page, setPage] = useState(1);
   const router = useRouter();
 
-  const PAGE_SIZE = 10;
+  const PAGE_SIZE = 50;
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) setSortDir(d => d === 'desc' ? 'asc' : 'desc');

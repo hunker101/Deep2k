@@ -8,9 +8,9 @@ function formatDate(date: string) {
   const d = new Date(date);
   const month = d.toLocaleString('en-US', { month: 'short' });
   const day = d.getDate();
-  const year = String(d.getFullYear()).slice(2);
+  const year = d.getFullYear();
   const time = d.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-  return `${month} ${day}, '${year} · ${time}`;
+  return `${month} ${day}, ${year} · ${time}`;
 }
 
 function getPathname(url: string | null): string {
@@ -78,12 +78,18 @@ export function LeadsTable({
   const [expanded, setExpanded] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<'all' | 'order' | 'form'>('all');
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+
+  const PAGE_SIZE = 25;
 
   const filtered = leads.filter(l => {
     if (typeFilter !== 'all' && l.type !== typeFilter) return false;
     if (search && !(l.domain ?? '').toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const colSpan = showDomain ? 9 : 8;
 
@@ -124,7 +130,7 @@ export function LeadsTable({
               {(['all', 'order', 'form'] as const).map(t => (
                 <button
                   key={t}
-                  onClick={() => setTypeFilter(t)}
+                  onClick={() => { setTypeFilter(t); setPage(1); }}
                   className={`px-2.5 py-1 rounded-md text-xs font-mono transition-colors ${
                     typeFilter === t
                       ? 'bg-[var(--c-subtle)] text-[var(--c-text)]'
@@ -146,7 +152,7 @@ export function LeadsTable({
               type="text"
               placeholder="Search store..."
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={e => { setSearch(e.target.value); setPage(1); }}
               className="pl-8 pr-7 py-1.5 bg-[var(--c-deep)] border border-[var(--c-border)] rounded-lg text-xs font-mono text-[var(--c-text)] placeholder-[var(--c-text-3)] focus:outline-none focus:border-emerald-400/40 w-40"
             />
             {search && (
@@ -187,7 +193,7 @@ export function LeadsTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--c-border)]">
-            {filtered.map(lead => {
+            {paginated.map(lead => {
               const f = lead.fields as Record<string, string>;
               const name = f['first_name'] && f['last_name']
                 ? `${f['first_name']} ${f['last_name']}`
@@ -232,6 +238,56 @@ export function LeadsTable({
             })}
           </tbody>
         </table>
+      )}
+
+      {totalPages > 1 && (
+        <div className="px-5 py-3 border-t border-[var(--c-border)] flex items-center justify-between">
+          <span className="text-xs font-mono text-[var(--c-text-3)]">
+            {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="w-7 h-7 flex items-center justify-center rounded-md text-[var(--c-text-3)] hover:text-[var(--c-text)] hover:bg-[var(--c-subtle)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            {(() => {
+              const delta = 2;
+              const range: (number | '…')[] = [];
+              const left = Math.max(2, page - delta);
+              const right = Math.min(totalPages - 1, page + delta);
+              range.push(1);
+              if (left > 2) range.push('…');
+              for (let i = left; i <= right; i++) range.push(i);
+              if (right < totalPages - 1) range.push('…');
+              if (totalPages > 1) range.push(totalPages);
+              return range.map((p, i) =>
+                p === '…' ? (
+                  <span key={`e-${i}`} className="w-7 h-7 flex items-center justify-center text-xs font-mono text-[var(--c-text-3)]">…</span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p as number)}
+                    className={`w-7 h-7 flex items-center justify-center rounded-md text-xs font-mono transition-colors ${
+                      page === p ? 'bg-emerald-400/20 text-emerald-400 border border-emerald-400/30' : 'text-[var(--c-text-2)] hover:text-[var(--c-text)] hover:bg-[var(--c-subtle)]'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                )
+              );
+            })()}
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="w-7 h-7 flex items-center justify-center rounded-md text-[var(--c-text-3)] hover:text-[var(--c-text)] hover:bg-[var(--c-subtle)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
