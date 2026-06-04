@@ -9,7 +9,7 @@ interface CreatedSite {
   scriptPath: string;
   endpointPath: string;
   beaconMethod: string;
-  firstPartySubdomain: string;
+  firstPartySubdomain: string | null;
   script: string;
 }
 
@@ -98,7 +98,7 @@ export function AddSiteModal({ onClose, onCreated }: { onClose: () => void; onCr
               </div>
 
               <div className="bg-[var(--c-deep)] border border-[var(--c-border)] rounded-xl divide-y divide-[var(--c-border)]">
-                <InfoRow label="First-party subdomain" value={created.firstPartySubdomain} field="subdomain" copiedField={copiedField} onCopy={() => copy(created.firstPartySubdomain, 'subdomain')} />
+                {created.firstPartySubdomain && <InfoRow label="First-party subdomain" value={created.firstPartySubdomain} field="subdomain" copiedField={copiedField} onCopy={() => copy(created.firstPartySubdomain!, 'subdomain')} />}
                 <div className="flex items-center justify-between px-4 py-3">
                   <span className="text-xs font-mono text-[var(--c-text-2)]">Tracker script</span>
                   <button
@@ -113,11 +113,13 @@ export function AddSiteModal({ onClose, onCreated }: { onClose: () => void; onCr
                 </div>
               </div>
 
-              <div className="bg-[var(--c-deep)] border border-[var(--c-border)] rounded-xl p-4 space-y-1.5 text-xs font-mono text-[var(--c-text-2)]">
-                <p className="text-[var(--c-text)] font-semibold text-xs mb-2.5">Cloudflare setup</p>
-                <p>a.  DNS → Add CNAME: <span className="text-emerald-400">{created.firstPartySubdomain.split('.')[0]}</span> → <span className="text-emerald-400">deep2k-worker.vantatech.workers.dev</span> (Proxied)</p>
-                <p>b.  Workers Routes → Add route: <span className="text-emerald-400">{created.firstPartySubdomain}/*</span> → <span className="text-emerald-400">deep2k-proxy</span></p>
-              </div>
+              {created.firstPartySubdomain && (
+                <div className="bg-[var(--c-deep)] border border-[var(--c-border)] rounded-xl p-4 space-y-1.5 text-xs font-mono text-[var(--c-text-2)]">
+                  <p className="text-[var(--c-text)] font-semibold text-xs mb-2.5">Cloudflare setup</p>
+                  <p>a.  DNS → Add CNAME: <span className="text-emerald-400">{created.firstPartySubdomain.split('.')[0]}</span> → <span className="text-emerald-400">deep2k-worker.vantatech.workers.dev</span> (Proxied)</p>
+                  <p>b.  Workers Routes → Add route: <span className="text-emerald-400">{created.firstPartySubdomain}/*</span> → <span className="text-emerald-400">deep2k-proxy</span></p>
+                </div>
+              )}
 
               <div className="bg-[var(--c-deep)] border border-[var(--c-border)] rounded-xl p-4 space-y-1.5 text-xs font-mono text-[var(--c-text-2)]">
                 <p className="text-[var(--c-text)] font-semibold text-xs mb-2.5">Inject into Shopify theme</p>
@@ -210,7 +212,7 @@ export function AddSiteModal({ onClose, onCreated }: { onClose: () => void; onCr
 }
 
 function InfoRow({ label, value, field, copiedField, onCopy }: {
-  label: string; value: string; field: string; copiedField: string | null; onCopy: () => void;
+  label: string; value: string | null; field: string; copiedField: string | null; onCopy: () => void;
 }) {
   const copied = copiedField === field;
   return (
