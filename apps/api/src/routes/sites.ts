@@ -58,9 +58,10 @@ export function sitesRouter(db: Db, env: Env): Router {
       }
     } while (usedPaths.has(uniqueEndpointPath));
 
+    const isMyshopify = parsed.data.domain.endsWith('.myshopify.com');
     const subdomainPool = SUBDOMAIN_PREFIX_POOL as readonly string[];
     const prefix = subdomainPool[Math.floor(Math.random() * subdomainPool.length)]!;
-    const firstPartySubdomain = `${prefix}.${parsed.data.domain}`;
+    const firstPartySubdomain = isMyshopify ? null : `${prefix}.${parsed.data.domain}`;
     try {
       const [row] = await db
         .insert(sites)
