@@ -103,6 +103,7 @@ export function statsRouter(db: Db): Router {
         s.beacon_method AS "beaconMethod",
         s.created_at        AS "createdAt",
         s.last_injected_at  AS "lastInjectedAt",
+        s.category_id       AS "categoryId",
         COALESCE(SUM(ds.pageviews), 0)::int       AS "totalPageviews",
         COALESCE(SUM(ds.unique_visitors), 0)::int AS "totalVisitors",
         le.last_event                             AS "lastEvent"
@@ -115,7 +116,7 @@ export function statsRouter(db: Db): Router {
         FROM events
         GROUP BY site_id
       ) le ON le.site_id = s.id
-      GROUP BY s.id, s.last_injected_at, le.last_event
+      GROUP BY s.id, s.last_injected_at, s.category_id, le.last_event
       ORDER BY s.created_at DESC
     `);
 

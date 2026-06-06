@@ -7,6 +7,7 @@ export interface SiteRow {
   endpointPath: string;
   beaconMethod: string;
   firstPartySubdomain: string | null;
+  categoryId: string | null;
   lastInjectedAt: string | null;
   createdAt: string;
 }
@@ -112,6 +113,18 @@ export async function fetchLastEvent(id: string): Promise<string | null> {
   if (!res.ok) return null;
   const data = await res.json() as { lastEvent: string | null };
   return data.lastEvent;
+}
+
+export interface CategoryRow {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
+export async function fetchCategories(): Promise<CategoryRow[]> {
+  const res = await fetch(`${apiBase()}/api/categories`, { headers: adminHeaders(), cache: 'no-store' });
+  if (!res.ok) return [];
+  return res.json();
 }
 
 export interface LeadRow {

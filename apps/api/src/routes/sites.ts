@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
-import { and, eq, gte, lte } from 'drizzle-orm';
+import { and, eq, gte, inArray, lte } from 'drizzle-orm';
 import { sites, leads, type Db } from '@deep2k/db';
 import { generateScript, generateSiteConfig, generateEndpointPath } from '@deep2k/tracker-generator';
 import { SUBDOMAIN_PREFIX_POOL } from '@deep2k/shared';
@@ -9,6 +9,7 @@ import { pushSiteToKV, deleteSiteFromKV } from '../lib/cloudflare.js';
 
 const CreateSiteBody = z.object({
   domain: z.string().min(1).max(253),
+  categoryId: z.string().uuid().optional().nullable(),
 });
 
 function pickBackendUrl(backendUrls: string | undefined): string | null {
@@ -75,6 +76,7 @@ export function sitesRouter(db: Db, env: Env): Router {
           variableSeed: cfg.variable_seed,
           backendUrl: pickBackendUrl(env.BACKEND_URLS),
           firstPartySubdomain,
+          categoryId: parsed.data.categoryId ?? null,
         })
         .returning();
 
@@ -107,20 +109,34 @@ export function sitesRouter(db: Db, env: Env): Router {
 
   router.patch('/sites/:id', async (req: Request, res: Response) => {
     const id = req.params.id ?? '';
-    const { endpointPath } = req.body as { endpointPath?: string };
-    if (!endpointPath) { res.status(400).json({ error: 'endpointPath required' }); return; }
-    const [row] = await db.update(sites).set({ endpointPath }).where(eq(sites.id, id)).returning();
+    const body = req.body as { endpointPath?: string; categoryId?: string | null };
+
+    const updates: Record<string, unknown> = {};
+    if (body.endpointPath) updates.endpointPath = body.endpointPath;
+    if ('categoryId' in body) updates.categoryId = body.categoryId ?? null;
+
+    if (Object.keys(updates).length === 0) { res.status(400).json({ error: 'nothing to update' }); return; }
+
+    const [row] = await db.update(sites).set(updates).where(eq(sites.id, id)).returning();
     if (!row) { res.status(404).end(); return; }
 
-    // Sync updated endpoint to KV.
-    await pushSiteToKV(row.domain, {
-      id: row.id,
-      secret: row.secret,
-      endpoint_path: endpointPath,
-      backend_url: row.backendUrl,
-    }).catch(err => console.error('[cf-kv] patch sync failed:', err));
+    if (body.endpointPath) {
+      await pushSiteToKV(row.domain, {
+        id: row.id,
+        secret: row.secret,
+        endpoint_path: body.endpointPath,
+        backend_url: row.backendUrl,
+      }).catch(err => console.error('[cf-kv] patch sync failed:', err));
+    }
 
     res.json(row);
+  });
+
+  router.post('/sites/bulk-assign-category', async (req: Request, res: Response) => {
+    const { siteIds, categoryId } = req.body as { siteIds?: string[]; categoryId?: string | null };
+    if (!Array.isArray(siteIds) || siteIds.length === 0) { res.status(400).json({ error: 'siteIds required' }); return; }
+    await db.update(sites).set({ categoryId: categoryId ?? null }).where(inArray(sites.id, siteIds));
+    res.json({ updated: siteIds.length });
   });
 
   router.post('/sites/:id/enable-first-party', async (req: Request, res: Response) => {

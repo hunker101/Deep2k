@@ -5,6 +5,7 @@ import { getDb } from './db.js';
 import { adminAuth } from './middleware/adminAuth.js';
 import { ingestRouter } from './routes/ingest.js';
 import { sitesRouter } from './routes/sites.js';
+import { categoriesRouter } from './routes/categories.js';
 import { statsRouter } from './routes/stats.js';
 import { adminRouter } from './routes/admin.js';
 import { leadsRouter } from './routes/leads.js';
@@ -43,6 +44,7 @@ app.use('/api', webhooksRouter(db));
 
 // Admin routes (bearer token)
 app.use('/api', adminAuth(env.ADMIN_TOKEN), sitesRouter(db, env));
+app.use('/api', adminAuth(env.ADMIN_TOKEN), categoriesRouter(db));
 app.use('/api', adminAuth(env.ADMIN_TOKEN), statsRouter(db));
 app.use('/api', adminAuth(env.ADMIN_TOKEN), adminRouter(db));
 

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
-  const body = await request.json() as { domain?: string };
+  const body = await request.json() as { domain?: string; categoryId?: string | null };
   if (!body.domain) {
     return NextResponse.json({ error: 'domain required' }, { status: 400 });
   }
@@ -14,7 +14,7 @@ export async function POST(request: Request) {
   const createRes = await fetch(`${apiBase}/api/sites`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ domain: body.domain }),
+    body: JSON.stringify({ domain: body.domain, categoryId: body.categoryId ?? null }),
   });
 
   if (!createRes.ok) {

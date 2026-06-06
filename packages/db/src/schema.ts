@@ -13,6 +13,12 @@ import {
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
+export const categories = pgTable('categories', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  name: text('name').notNull().unique(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const sites = pgTable(
   'sites',
   {
@@ -26,6 +32,7 @@ export const sites = pgTable(
     variableSeed: text('variable_seed').notNull(),
     backendUrl: text('backend_url'),
     firstPartySubdomain: text('first_party_subdomain'),
+    categoryId: uuid('category_id').references(() => categories.id, { onDelete: 'set null' }),
     lastInjectedAt: timestamp('last_injected_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -110,3 +117,4 @@ export type NewSite = typeof sites.$inferInsert;
 export type EventRow = typeof events.$inferSelect;
 export type DailyStat = typeof dailyStats.$inferSelect;
 export type Lead = typeof leads.$inferSelect;
+export type Category = typeof categories.$inferSelect;

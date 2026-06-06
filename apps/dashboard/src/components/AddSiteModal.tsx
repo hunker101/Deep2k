@@ -1,7 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+
+interface CategoryRow {
+  id: string;
+  name: string;
+}
 
 interface CreatedSite {
   id: string;
@@ -19,12 +24,38 @@ function isValidDomain(d: string): boolean {
 
 export function AddSiteModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [domain, setDomain] = useState('');
+  const [categoryId, setCategoryId] = useState<string>('');
+  const [categories, setCategories] = useState<CategoryRow[]>([]);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [showNewCategory, setShowNewCategory] = useState(false);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState('');
   const [created, setCreated] = useState<CreatedSite | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    fetch('/api/categories')
+      .then(r => r.ok ? r.json() : [])
+      .then((rows: CategoryRow[]) => setCategories(rows))
+      .catch(() => {});
+  }, []);
+
+  async function createAndSelectCategory(name: string) {
+    const res = await fetch('/api/categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    if (res.ok) {
+      const row = await res.json() as CategoryRow;
+      setCategories(prev => [...prev, row]);
+      setCategoryId(row.id);
+    }
+    setShowNewCategory(false);
+    setNewCategoryName('');
+  }
 
   const cleanDomain = domain.trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
   const domainTouched = cleanDomain.length > 0;
@@ -43,7 +74,7 @@ export function AddSiteModal({ onClose, onCreated }: { onClose: () => void; onCr
       const res = await fetch('/api/sites', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ domain: cleanDomain }),
+        body: JSON.stringify({ domain: cleanDomain, categoryId: categoryId || null }),
       });
       clearInterval(interval);
       const data = await res.json() as CreatedSite & { error?: string };
@@ -63,7 +94,7 @@ export function AddSiteModal({ onClose, onCreated }: { onClose: () => void; onCr
     setTimeout(() => setCopiedField(null), 2000);
   }
 
-  function reset() { setDomain(''); setCreated(null); setError(''); setProgress(0); }
+  function reset() { setDomain(''); setCategoryId(''); setCreated(null); setError(''); setProgress(0); }
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4">
@@ -166,6 +197,48 @@ export function AddSiteModal({ onClose, onCreated }: { onClose: () => void; onCr
                   ? <p className="text-yellow-400 text-xs font-mono mt-1.5">Doesn't look like a valid domain.</p>
                   : <p className="text-[var(--c-text-3)] text-xs font-mono mt-1.5">Use the primary apex domain, not myshopify.com</p>
                 }
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono text-[var(--c-text-2)] mb-2">Category <span className="text-[var(--c-text-3)]">(optional)</span></label>
+                {!showNewCategory ? (
+                  <select
+                    value={categoryId}
+                    onChange={e => {
+                      if (e.target.value === '__new__') { setShowNewCategory(true); }
+                      else setCategoryId(e.target.value);
+                    }}
+                    disabled={loading}
+                    className="w-full bg-[var(--c-deep)] border border-[var(--c-border)] focus:border-emerald-500 rounded-lg px-3 py-3 text-xs font-mono text-[var(--c-text)] focus:outline-none transition-colors"
+                  >
+                    <option value="">No category</option>
+                    {categories.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                    <option value="__new__">+ Add new category...</option>
+                  </select>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <input
+                      value={newCategoryName}
+                      onChange={e => setNewCategoryName(e.target.value)}
+                      placeholder="Category name"
+                      autoFocus
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (newCategoryName.trim()) createAndSelectCategory(newCategoryName.trim()); } }}
+                      className="flex-1 bg-[var(--c-deep)] border border-[var(--c-border)] focus:border-emerald-500 rounded-lg px-3 py-2.5 text-xs font-mono text-[var(--c-text)] placeholder-[var(--c-placeholder)] focus:outline-none transition-colors"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { if (newCategoryName.trim()) createAndSelectCategory(newCategoryName.trim()); }}
+                      className="bg-emerald-400 hover:bg-emerald-300 text-black text-xs font-mono font-semibold px-3 py-2.5 rounded-lg transition-colors"
+                    >Save</button>
+                    <button
+                      type="button"
+                      onClick={() => { setShowNewCategory(false); setNewCategoryName(''); }}
+                      className="text-[var(--c-text-3)] hover:text-[var(--c-text)] text-xs font-mono px-2 py-2.5 transition-colors"
+                    >Cancel</button>
+                  </div>
+                )}
               </div>
 
               {error && (

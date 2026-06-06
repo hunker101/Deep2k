@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { fetchSitesSummary, fetchOverview } from '@/lib/api';
+import { fetchSitesSummary, fetchOverview, fetchCategories } from '@/lib/api';
 import { TrafficChart } from '@/components/TrafficChart';
 import { SitesTable } from '@/components/SitesTable';
 import { FloatingActions } from '@/components/FloatingActions';
@@ -19,9 +19,10 @@ export default async function HomePage({
   searchParams: Promise<{ period?: string }>;
 }) {
   const { period = '7d' } = await searchParams;
-  const [sites, overview] = await Promise.all([
+  const [sites, overview, categories] = await Promise.all([
     fetchSitesSummary(period).catch(() => []),
     fetchOverview(period).catch(() => ({ totalPageviews: 0, totalVisitors: 0, siteCount: 0, daily: [] })),
+    fetchCategories().catch(() => []),
   ]);
 
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -109,7 +110,7 @@ export default async function HomePage({
           </div>
         </div>
 
-        <SitesTable sites={sites} />
+        <SitesTable sites={sites} categories={categories} />
       </main>
 
       <FloatingActions />

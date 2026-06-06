@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import type { SiteSummaryRow } from '@/lib/api';
+import type { SiteSummaryRow, CategoryRow } from '@/lib/api';
 
 type SortKey = 'visitors' | 'pageviews';
 type FilterTab = 'all' | 'active' | 'inactive';
@@ -154,17 +154,88 @@ function CountryBadge({ country }: { country: string | null }) {
   );
 }
 
-export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
+export function SitesTable({ sites, categories: initialCategories = [] }: { sites: SiteSummaryRow[]; categories?: CategoryRow[] }) {
   const [query, setQuery] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('visitors');
   const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
   const [filter, setFilter] = useState<FilterTab>('all');
   const [injectionFilter, setInjectionFilter] = useState<InjectionFilter>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('');
+  const [categories, setCategories] = useState<CategoryRow[]>(initialCategories);
+  const [catDropdownOpen, setCatDropdownOpen] = useState(false);
+  const [catNewName, setCatNewName] = useState('');
+  const [catAdding, setCatAdding] = useState(false);
+  const [showCatInput, setShowCatInput] = useState(false);
+  const [editingCatId, setEditingCatId] = useState<string | null>(null);
+  const [editingCatName, setEditingCatName] = useState('');
+  const [deletingCatId, setDeletingCatId] = useState<string | null>(null);
+  const catDropdownRef = useRef<HTMLDivElement>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [exportConfirm, setExportConfirm] = useState(false);
   const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkAssigning, setBulkAssigning] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (catDropdownRef.current && !catDropdownRef.current.contains(e.target as Node)) {
+        setCatDropdownOpen(false);
+        setShowCatInput(false);
+        setCatNewName('');
+        setEditingCatId(null);
+        setEditingCatName('');
+        setDeletingCatId(null);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  async function addCategory() {
+    if (!catNewName.trim()) return;
+    setCatAdding(true);
+    const res = await fetch('/api/categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: catNewName.trim() }),
+    });
+    if (res.ok) {
+      const row = await res.json() as CategoryRow;
+      setCategories(prev => [...prev, row]);
+      setCategoryFilter(row.id);
+      setPage(1);
+    }
+    setCatAdding(false);
+    setShowCatInput(false);
+    setCatNewName('');
+    setCatDropdownOpen(false);
+  }
+
+  async function renameCategory(id: string) {
+    if (!editingCatName.trim()) return;
+    const res = await fetch(`/api/categories/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: editingCatName.trim() }),
+    });
+    if (res.ok) {
+      const row = await res.json() as CategoryRow;
+      setCategories(prev => prev.map(c => c.id === id ? row : c));
+    }
+    setEditingCatId(null);
+    setEditingCatName('');
+  }
+
+  async function deleteCategory(id: string) {
+    const res = await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+    if (res.ok || res.status === 204) {
+      setCategories(prev => prev.filter(c => c.id !== id));
+      if (categoryFilter === id) { setCategoryFilter(''); setPage(1); }
+    }
+    setDeletingCatId(null);
+  }
 
   const PAGE_SIZE = 50;
 
@@ -185,6 +256,7 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
       if (injectionFilter === 'never') return !s.lastInjectedAt;
       return true;
     })
+    .filter(s => !categoryFilter || s.categoryId === categoryFilter)
     .filter(s => !query.trim() || s.domain.toLowerCase().includes(query.toLowerCase().trim()))
     .sort((a, b) => {
       const val = sortKey === 'visitors'
@@ -195,6 +267,34 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  function toggleRow(id: string) {
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAll() {
+    if (paginated.every(s => selected.has(s.id))) {
+      setSelected(prev => { const next = new Set(prev); paginated.forEach(s => next.delete(s.id)); return next; });
+    } else {
+      setSelected(prev => { const next = new Set(prev); paginated.forEach(s => next.add(s.id)); return next; });
+    }
+  }
+
+  async function bulkAssign(categoryId: string | null) {
+    setBulkAssigning(true);
+    await fetch('/api/sites/bulk-assign-category', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ siteIds: Array.from(selected), categoryId }),
+    });
+    setBulkAssigning(false);
+    setSelected(new Set());
+    router.refresh();
+  }
 
   async function confirmDelete(id: string) {
     setDeleting(id);
@@ -269,6 +369,100 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
                 {f.label}
               </button>
             ))}
+          </div>
+
+          {/* Category filter */}
+          <div className="relative" ref={catDropdownRef}>
+            <button
+              onClick={() => { setCatDropdownOpen(o => !o); setShowCatInput(false); setCatNewName(''); }}
+              className={`flex items-center gap-1.5 bg-[var(--c-bg)] border rounded-lg px-3 py-1.5 text-xs font-mono transition-colors ${
+                categoryFilter ? 'border-emerald-500 text-emerald-400' : 'border-[var(--c-border)] text-[var(--c-text)]'
+              }`}
+            >
+              {categoryFilter ? categories.find(c => c.id === categoryFilter)?.name ?? 'Category' : 'All categories'}
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            {catDropdownOpen && (
+              <div className="absolute top-full mt-1 right-0 z-20 bg-[var(--c-card)] border border-[var(--c-border)] rounded-xl shadow-xl min-w-[180px] overflow-hidden">
+                <button
+                  onClick={() => { setCategoryFilter(''); setPage(1); setCatDropdownOpen(false); }}
+                  className={`w-full text-left px-4 py-2.5 text-xs font-mono transition-colors hover:bg-[var(--c-hover)] ${!categoryFilter ? 'text-emerald-400' : 'text-[var(--c-text-2)]'}`}
+                >All categories</button>
+                {categories.map(c => (
+                  <div key={c.id} className="group flex items-center hover:bg-[var(--c-hover)] transition-colors">
+                    {editingCatId === c.id ? (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 w-full">
+                        <input
+                          value={editingCatName}
+                          onChange={e => setEditingCatName(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') renameCategory(c.id); if (e.key === 'Escape') { setEditingCatId(null); setEditingCatName(''); } }}
+                          autoFocus
+                          className="flex-1 bg-[var(--c-deep)] border border-[var(--c-border)] focus:border-emerald-500 rounded px-2 py-1 text-xs font-mono text-[var(--c-text)] focus:outline-none min-w-0"
+                        />
+                        <button onClick={() => renameCategory(c.id)} className="text-xs font-mono text-emerald-400 hover:text-emerald-300 flex-shrink-0">Save</button>
+                        <button onClick={() => { setEditingCatId(null); setEditingCatName(''); }} className="text-xs font-mono text-[var(--c-text-3)] hover:text-[var(--c-text)] flex-shrink-0">✕</button>
+                      </div>
+                    ) : deletingCatId === c.id ? (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 w-full">
+                        <span className="flex-1 text-xs font-mono text-red-400 truncate">Delete "{c.name}"?</span>
+                        <button onClick={() => deleteCategory(c.id)} className="text-xs font-mono text-red-400 hover:text-red-300 flex-shrink-0">Yes</button>
+                        <button onClick={() => setDeletingCatId(null)} className="text-xs font-mono text-[var(--c-text-3)] hover:text-[var(--c-text)] flex-shrink-0">No</button>
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => { setCategoryFilter(c.id); setPage(1); setCatDropdownOpen(false); }}
+                          className={`flex-1 text-left px-4 py-2.5 text-xs font-mono ${categoryFilter === c.id ? 'text-emerald-400' : 'text-[var(--c-text-2)]'}`}
+                        >{c.name}</button>
+                        <div className="flex items-center gap-0.5 pr-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={e => { e.stopPropagation(); setEditingCatId(c.id); setEditingCatName(c.name); setDeletingCatId(null); }}
+                            className="p-1 text-[var(--c-text-3)] hover:text-[var(--c-text)] transition-colors rounded"
+                            title="Rename"
+                          >
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                          </button>
+                          <button
+                            onClick={e => { e.stopPropagation(); setDeletingCatId(c.id); setEditingCatId(null); }}
+                            className="p-1 text-[var(--c-text-3)] hover:text-red-400 transition-colors rounded"
+                            title="Delete"
+                          >
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+                <div className="border-t border-[var(--c-border)]">
+                  {!showCatInput ? (
+                    <button
+                      onClick={() => setShowCatInput(true)}
+                      className="w-full text-left px-4 py-2.5 text-xs font-mono text-sky-400 hover:bg-[var(--c-hover)] transition-colors flex items-center gap-1.5"
+                    >
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                      Add category
+                    </button>
+                  ) : (
+                    <div className="px-3 py-2 flex items-center gap-1.5">
+                      <input
+                        value={catNewName}
+                        onChange={e => setCatNewName(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') addCategory(); if (e.key === 'Escape') { setShowCatInput(false); setCatNewName(''); } }}
+                        placeholder="Category name"
+                        autoFocus
+                        className="flex-1 bg-[var(--c-deep)] border border-[var(--c-border)] focus:border-emerald-500 rounded px-2 py-1 text-xs font-mono text-[var(--c-text)] placeholder-[var(--c-placeholder)] focus:outline-none min-w-0"
+                      />
+                      <button
+                        onClick={addCategory}
+                        disabled={catAdding || !catNewName.trim()}
+                        className="text-xs font-mono text-emerald-400 hover:text-emerald-300 disabled:opacity-40 transition-colors flex-shrink-0"
+                      >{catAdding ? '…' : 'Save'}</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Search */}
@@ -418,6 +612,14 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
           <table className="w-full">
             <thead>
               <tr className="border-b border-[var(--c-border)]">
+                <th className="pl-4 pr-2 py-3 w-8">
+                  <input
+                    type="checkbox"
+                    checked={paginated.length > 0 && paginated.every(s => selected.has(s.id))}
+                    onChange={toggleAll}
+                    className="accent-emerald-400 cursor-pointer"
+                  />
+                </th>
                 <th className="px-5 py-3 text-left text-xs font-mono text-[var(--c-text-3)] uppercase tracking-widest">Site domain</th>
                 <th className="px-5 py-3 text-right text-xs font-mono text-[var(--c-text-3)] uppercase tracking-widest cursor-pointer hover:text-[var(--c-text)] transition-colors select-none" onClick={() => toggleSort('visitors')}>
                   Visitors <SortIcon k="visitors" />
@@ -437,13 +639,27 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
                 <tr
                   key={s.id}
                   onClick={() => router.push(`/sites/${s.id}`)}
-                  className="hover:bg-[var(--c-hover)] cursor-pointer transition-colors group select-none"
+                  className={`hover:bg-[var(--c-hover)] cursor-pointer transition-colors group select-none ${selected.has(s.id) ? 'bg-emerald-400/5' : ''}`}
                 >
+                  <td className="pl-4 pr-2 py-3.5" onClick={e => { e.stopPropagation(); toggleRow(s.id); }}>
+                    <input
+                      type="checkbox"
+                      checked={selected.has(s.id)}
+                      onChange={() => toggleRow(s.id)}
+                      className="accent-emerald-400 cursor-pointer"
+                    />
+                  </td>
                   <td className="px-5 py-3.5">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: s.totalPageviews > 0 ? '#34d399' : 'var(--c-border)', boxShadow: s.totalPageviews > 0 ? '0 0 6px #34d399' : 'none' }} />
                       <span className="text-emerald-400 font-mono text-sm group-hover:underline underline-offset-2" title={s.domain}>{s.domain}</span>
                       <InjectionIndicator lastInjectedAt={s.lastInjectedAt ?? null} />
+                      {s.categoryId && (() => {
+                        const cat = categories.find(c => c.id === s.categoryId);
+                        return cat ? (
+                          <span className="text-[10px] font-mono text-sky-400 border border-sky-400/30 bg-sky-400/10 px-1.5 py-0.5 rounded">{cat.name}</span>
+                        ) : null;
+                      })()}
                     </div>
                   </td>
                   <td className="px-5 py-3.5 text-right font-mono tabular-nums text-[var(--c-text)] text-sm font-semibold tracking-tight">{s.totalVisitors.toLocaleString()}</td>
@@ -474,6 +690,31 @@ export function SitesTable({ sites }: { sites: SiteSummaryRow[] }) {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Bulk assign bar */}
+      {selected.size > 0 && (
+        <div className="px-5 py-3 border-t border-emerald-400/20 bg-emerald-400/5 flex items-center justify-between gap-3">
+          <span className="text-xs font-mono text-emerald-400">{selected.size} selected</span>
+          <div className="flex items-center gap-2">
+            <select
+              disabled={bulkAssigning}
+              defaultValue=""
+              onChange={e => { if (e.target.value !== '') bulkAssign(e.target.value === '__none__' ? null : e.target.value); e.target.value = ''; }}
+              className="bg-[var(--c-deep)] border border-[var(--c-border)] focus:border-emerald-500 rounded-lg px-3 py-1.5 text-xs font-mono text-[var(--c-text)] focus:outline-none transition-colors disabled:opacity-50"
+            >
+              <option value="" disabled>{bulkAssigning ? 'Assigning…' : 'Assign category…'}</option>
+              {categories.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+              <option value="__none__">Remove category</option>
+            </select>
+            <button
+              onClick={() => setSelected(new Set())}
+              className="text-xs font-mono text-[var(--c-text-3)] hover:text-[var(--c-text)] transition-colors px-2 py-1.5"
+            >Clear</button>
+          </div>
         </div>
       )}
 
