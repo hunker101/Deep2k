@@ -243,6 +243,27 @@ export function adminRouter(db: Db): Router {
     }
   });
 
+  router.get('/leads/by-email', async (req: Request, res: Response) => {
+    const email = ((req.query.email as string) ?? '').trim().toLowerCase();
+    if (!email) { res.status(400).json({ error: 'email required' }); return; }
+    const result = await db.execute(sql`
+      SELECT
+        l.id,
+        l.site_id      AS "siteId",
+        s.domain,
+        l.type,
+        l.fields,
+        l.page_url     AS "pageUrl",
+        l.created_at   AS "createdAt"
+      FROM leads l
+      JOIN sites s ON s.id = l.site_id
+      WHERE lower(l.fields->>'email') = ${email}
+         OR lower(l.fields->>'contact[email]') = ${email}
+      ORDER BY l.created_at DESC
+    `);
+    res.json(result.rows);
+  });
+
   router.get('/leads', async (req: Request, res: Response) => {
     const { from, to, type, site_id } = req.query as Record<string, string>;
     const conditions = [];

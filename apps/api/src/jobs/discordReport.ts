@@ -64,6 +64,46 @@ export async function sendDiscordReport(db: Db): Promise<void> {
   const devices = devicesResult.rows as unknown as DeviceRow[];
   const totalDevices = devices.reduce((s, d) => s + Number(d.cnt), 0);
 
+  // Leads summary for yesterday
+  const leadsResult = await db.execute(sql`
+    SELECT
+      COUNT(*)::int                                           AS total,
+      COUNT(*) FILTER (WHERE type = 'order')::int            AS orders,
+      COUNT(*) FILTER (WHERE type = 'form')::int             AS forms
+    FROM leads
+    WHERE created_at >= ${date}::date
+      AND created_at <  ${date}::date + interval '1 day'
+  `);
+  const leadsRow = leadsResult.rows[0] as { total: number; orders: number; forms: number };
+
+  // Repeat buyers yesterday (same email appeared 2+ times)
+  const repeatResult = await db.execute(sql`
+    SELECT COUNT(DISTINCT email) AS cnt FROM (
+      SELECT lower(fields->>'email') AS email
+      FROM leads
+      WHERE created_at >= ${date}::date
+        AND created_at <  ${date}::date + interval '1 day'
+        AND fields->>'email' IS NOT NULL
+        AND fields->>'email' <> ''
+      GROUP BY lower(fields->>'email')
+      HAVING COUNT(*) > 1
+    ) t
+  `);
+  const repeatCount = Number((repeatResult.rows[0] as { cnt: number })?.cnt ?? 0);
+
+  // Top 3 stores by leads yesterday
+  const topLeadStoresResult = await db.execute(sql`
+    SELECT s.domain, COUNT(*)::int AS lead_count
+    FROM leads l
+    JOIN sites s ON s.id = l.site_id
+    WHERE l.created_at >= ${date}::date
+      AND l.created_at <  ${date}::date + interval '1 day'
+    GROUP BY s.domain
+    ORDER BY lead_count DESC
+    LIMIT 3
+  `);
+  const topLeadStores = topLeadStoresResult.rows as unknown as { domain: string; lead_count: number }[];
+
   // Script rotation reminder
   const rotationResult = await db.execute(sql`
     SELECT value FROM app_settings WHERE key = 'scripts_last_rotated_at'
@@ -147,6 +187,17 @@ export async function sendDiscordReport(db: Db): Promise<void> {
           value: deviceBreakdown,
           inline: true,
         },
+        ...(leadsRow.total > 0 ? [{
+          name: '📥 Leads Yesterday',
+          value: [
+            `**Orders** ${leadsRow.orders}  ·  **Forms** ${leadsRow.forms}  ·  **Total** ${leadsRow.total}`,
+            repeatCount > 0 ? `🔁 **Repeat buyers** ${repeatCount}` : '',
+            topLeadStores.length > 0
+              ? '\n' + topLeadStores.map((s, i) => `\`${i + 1}.\` **${s.domain}** — ${s.lead_count} leads`).join('\n')
+              : '',
+          ].filter(Boolean).join('\n'),
+          inline: false,
+        }] : []),
         ...(silentSites.length > 0 ? [{
           name: '⚠️ Silent Sites (0 events in 24h)',
           value: silentSites.map(s => `\`${s.domain}\``).join('\n'),

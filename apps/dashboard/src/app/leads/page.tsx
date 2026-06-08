@@ -15,6 +15,22 @@ export default async function LeadsPage({
   const forms = leads.filter(l => l.type === 'form').length;
   const activeSites = new Set(leads.map(l => l.siteId)).size;
 
+  const { repeatBuyers, repeatPct } = (() => {
+    const counts = new Map<string, number>();
+    for (const l of leads) {
+      const f = l.fields as Record<string, string>;
+      const email = f['email'] ?? f['contact[email]'];
+      if (email) {
+        const key = email.toLowerCase();
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+      }
+    }
+    const uniqueCustomers = counts.size;
+    const repeat = [...counts.values()].filter(c => c > 1).length;
+    const pct = uniqueCustomers > 0 ? Math.round((repeat / uniqueCustomers) * 100) : 0;
+    return { repeatBuyers: repeat, repeatPct: pct };
+  })();
+
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   });
@@ -62,11 +78,12 @@ export default async function LeadsPage({
           </p>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           <StatCard label="Total Leads" value={leads.length} />
           <StatCard label="Total Orders" value={orders} badge="order" />
           <StatCard label="Form Submissions" value={forms} badge="form" />
-          <StatCard label="Sites with Leads" value={activeSites} note="active in last day" />
+          <StatCard label="Repeat Buyers" value={repeatBuyers} note={`${repeatPct}% of customers`} />
+          <StatCard label="Sites with Leads" value={activeSites} />
         </div>
 
         <LeadsTable leads={leads} showDomain period={period} />
