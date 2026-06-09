@@ -200,7 +200,8 @@ export async function sendDiscordReport(db: Db): Promise<void> {
         }] : []),
         ...(silentSites.length > 0 ? [{
           name: '⚠️ Silent Sites (0 events in 24h)',
-          value: silentSites.map(s => `\`${s.domain}\``).join('\n'),
+          value: silentSites.slice(0, 20).map(s => `\`${s.domain}\``).join('\n')
+            + (silentSites.length > 20 ? `\n_…and ${silentSites.length - 20} more_` : ''),
           inline: false,
         }] : []),
         ...(daysSinceRotation === null ? [{
