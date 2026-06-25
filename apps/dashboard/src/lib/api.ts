@@ -68,7 +68,11 @@ function range(days: number): { from: string; to: string } {
 
 export function dateRangeParams(period: string): URLSearchParams {
   const p = new URLSearchParams();
-  if (period === '7d') { const r = range(7); p.set('from', r.from); p.set('to', r.to); }
+  if (period.startsWith('custom:')) {
+    const parts = period.split(':');
+    if (parts[1]) p.set('from', parts[1]);
+    if (parts[2]) p.set('to', parts[2]);
+  } else if (period === '7d') { const r = range(7); p.set('from', r.from); p.set('to', r.to); }
   else if (period === '30d') { const r = range(30); p.set('from', r.from); p.set('to', r.to); }
   else if (period === 'month') {
     const now = new Date();

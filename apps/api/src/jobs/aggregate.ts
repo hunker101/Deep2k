@@ -97,6 +97,9 @@ export async function runAggregation(db: Db, lookbackHours = 2): Promise<number>
       JOIN events e
         ON e.site_id = a.site_id
         AND date_trunc('day', e.received_at)::date = a.day
+        AND e.path NOT IN ('/robots.txt', '/sitemap.xml', '/sitemap_index.xml', '/favicon.ico', '/xmlrpc.php')
+        AND e.path NOT LIKE '/.well-known/%'
+        AND e.path NOT LIKE '/wp-%'
       GROUP BY a.site_id, a.day
     )
     INSERT INTO daily_stats (site_id, date, pageviews, unique_visitors, top_paths, countries, devices, top_referrers, bounced_visitors)

@@ -6,6 +6,7 @@ import { GetScriptButton } from '@/components/GetScriptModal';
 import { EnableFirstPartyButton } from '@/components/EnableFirstPartyButton';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import type { DailyStatRow, SiteRow } from '@/lib/api';
+import { AcquisitionChannels } from '@/components/AcquisitionChannels';
 
 const PERIODS = [
   { key: 'today', label: 'Today' },
@@ -223,6 +224,9 @@ export default async function SitePage({
           </Panel>
         </div>
 
+        {/* Acquisition channels mockup */}
+        <AcquisitionChannels referrerCounts={referrerCounts} totalVisitors={totalVisitors} />
+
         {/* Device breakdown — full width */}
         <div className="bg-[var(--c-card)] border border-[var(--c-border)] rounded-xl overflow-hidden">
           <div className="px-5 py-4 border-b border-[var(--c-border)]">
@@ -288,6 +292,12 @@ export default async function SitePage({
                   View leads →
                 </Link>
               </ConfigRow>
+              <ConfigRow
+                label="Shopify webhook URL"
+                value={`${process.env.NEXT_PUBLIC_API_PUBLIC_URL ?? process.env.NEXT_PUBLIC_API_BASE}/api/sites/${site.id}/webhook/shopify`}
+                mono
+                copy
+              />
             </div>
           ) : (
             <div className="p-6 text-xs font-mono text-[var(--c-text-2)]">Site not found</div>

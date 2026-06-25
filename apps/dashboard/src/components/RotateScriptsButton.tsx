@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 
 type State = 'idle' | 'loading' | 'done' | 'error';
 
@@ -39,7 +40,7 @@ export function RotateScriptsButton() {
         Rotate scripts
       </button>
 
-      {open && (
+      {open && createPortal(
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4">
           <div className="bg-[var(--c-card)] border border-[var(--c-border)] rounded-2xl w-full max-w-md">
             {/* Header */}
@@ -115,7 +116,8 @@ export function RotateScriptsButton() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

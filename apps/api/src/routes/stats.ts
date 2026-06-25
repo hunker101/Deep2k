@@ -177,5 +177,27 @@ export function statsRouter(db: Db): Router {
     }
   });
 
+  // Live visitor count — distinct visitors with events in the last 5 minutes.
+  router.get('/stats/live', async (_req: Request, res: Response) => {
+    try {
+      const result = await db.execute(sql`
+        SELECT
+          site_id::text AS "siteId",
+          COUNT(DISTINCT visitor_id)::int AS live
+        FROM events
+        WHERE received_at > now() - interval '5 minutes'
+        GROUP BY site_id
+      `);
+      const perSite = Object.fromEntries(
+        (result.rows as { siteId: string; live: number }[]).map(r => [r.siteId, r.live])
+      );
+      const total = Object.values(perSite).reduce((s, v) => s + v, 0);
+      res.json({ total, perSite });
+    } catch (err) {
+      console.error('[live] db error:', err);
+      res.status(500).json({ total: 0, perSite: {} });
+    }
+  });
+
   return router;
 }

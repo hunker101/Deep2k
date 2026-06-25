@@ -157,6 +157,19 @@ function CountryBadge({ country }: { country: string | null }) {
 export function SitesTable({ sites, categories: initialCategories = [] }: { sites: SiteSummaryRow[]; categories?: CategoryRow[] }) {
   const [query, setQuery] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('visitors');
+  const [liveData, setLiveData] = useState<{ total: number; perSite: Record<string, number> }>({ total: 0, perSite: {} });
+
+  useEffect(() => {
+    async function fetchLive() {
+      try {
+        const res = await fetch('/api/stats/live');
+        if (res.ok) setLiveData(await res.json() as { total: number; perSite: Record<string, number> });
+      } catch {}
+    }
+    fetchLive();
+    const interval = setInterval(fetchLive, 30_000);
+    return () => clearInterval(interval);
+  }, []);
   const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
   const [filter, setFilter] = useState<FilterTab>('all');
   const [injectionFilter, setInjectionFilter] = useState<InjectionFilter>('all');
@@ -173,6 +186,7 @@ export function SitesTable({ sites, categories: initialCategories = [] }: { site
   const [deleting, setDeleting] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [exportConfirm, setExportConfirm] = useState(false);
+  const [liveOnly, setLiveOnly] = useState(false);
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkAssigning, setBulkAssigning] = useState(false);
@@ -257,6 +271,7 @@ export function SitesTable({ sites, categories: initialCategories = [] }: { site
       return true;
     })
     .filter(s => !categoryFilter || s.categoryId === categoryFilter)
+    .filter(s => !liveOnly || (liveData.perSite[s.id] ?? 0) > 0)
     .filter(s => !query.trim() || s.domain.toLowerCase().includes(query.toLowerCase().trim()))
     .sort((a, b) => {
       const val = sortKey === 'visitors'
@@ -465,6 +480,22 @@ export function SitesTable({ sites, categories: initialCategories = [] }: { site
             )}
           </div>
 
+          {/* Live filter */}
+          <button
+            onClick={() => { setLiveOnly(v => !v); setPage(1); }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-mono transition-colors ${
+              liveOnly
+                ? 'bg-emerald-400/10 border-emerald-400/30 text-emerald-400'
+                : 'bg-[var(--c-bg)] border-[var(--c-border)] text-[var(--c-text-3)] hover:text-[var(--c-text)]'
+            }`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${liveOnly ? 'bg-emerald-400 animate-pulse' : 'bg-[var(--c-text-3)]'}`} />
+            Live
+            {Object.keys(liveData.perSite).length > 0 && (
+              <span className="tabular-nums">{Object.values(liveData.perSite).filter(v => v > 0).length}</span>
+            )}
+          </button>
+
           {/* Search */}
           <div className="relative">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--c-text-3)]" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -653,6 +684,12 @@ export function SitesTable({ sites, categories: initialCategories = [] }: { site
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: s.totalPageviews > 0 ? '#34d399' : 'var(--c-border)', boxShadow: s.totalPageviews > 0 ? '0 0 6px #34d399' : 'none' }} />
                       <span className="text-emerald-400 font-mono text-sm group-hover:underline underline-offset-2" title={s.domain}>{s.domain}</span>
+                      {(liveData.perSite[s.id] ?? 0) > 0 && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-1.5 py-0.5 rounded-full">
+                          <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
+                          {liveData.perSite[s.id]}
+                        </span>
+                      )}
                       <InjectionIndicator lastInjectedAt={s.lastInjectedAt ?? null} />
                       {s.categoryId && (() => {
                         const cat = categories.find(c => c.id === s.categoryId);

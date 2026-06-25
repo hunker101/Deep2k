@@ -29,6 +29,12 @@ interface WorkerSite {
   backend_url?: string;
 }
 
+function isBot(ua: string): boolean {
+  if (!ua) return true;
+  const u = ua.toLowerCase();
+  return /bot|crawl|spider|slurp|wget|curl|python|java\/|go-http|okhttp|node-fetch|axios|scrapy|httpclient|libwww|lwp-|mechanize|nikto|nmap|masscan|zgrab|nuclei|headlesschrome|phantom|puppeteer|playwright|selenium|webdriver|chrome-lighthouse|googlebot|bingbot|yandexbot|baiduspider|duckduckbot|sogou|exabot|facebookexternalhit|ia_archiver|mj12bot|ahrefsbot|semrushbot|dotbot|rogerbot|uptimerobot|pingdom|gtmetrix|newrelic|datadog|site24x7|statuscake/.test(u);
+}
+
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -108,6 +114,17 @@ export default {
 
     const ip = req.headers.get('cf-connecting-ip') ?? '';
     const ua = req.headers.get('user-agent') ?? '';
+
+    // Layer 1 bot filter — silently drop known bots before they reach the API
+    if (isBot(ua)) {
+      if (req.method === 'GET') {
+        return new Response(GIF_BYTES, {
+          headers: { 'Content-Type': 'image/gif', 'Cache-Control': 'no-store', ...CORS_HEADERS },
+        });
+      }
+      return new Response(null, { status: 204, headers: CORS_HEADERS });
+    }
+
     const country =
       (req as Request & { cf?: { country?: string } }).cf?.country ?? '';
 
