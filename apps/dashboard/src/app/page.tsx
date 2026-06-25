@@ -109,9 +109,8 @@ export default async function HomePage({
           <span className="text-[var(--c-text-2)] text-xs font-mono">{today}</span>
         </div>
 
-        {/* Right: period + actions */}
+        {/* Right: actions */}
         <div className="flex items-center gap-3 justify-end">
-          <PeriodSelector current={period} customFrom={from} customTo={to} />
           <RotateScriptsButton />
           <ThemeToggle />
           <a
@@ -132,7 +131,11 @@ export default async function HomePage({
       <div className="px-6 pt-8 space-y-6">
 
         {/* Stat cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <div>
+          <div className="flex justify-end mb-3">
+            <PeriodSelector current={period} customFrom={from} customTo={to} />
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           <StatCard
             label="Total Pageviews"
             value={overview.totalPageviews.toLocaleString()}
@@ -157,6 +160,7 @@ export default async function HomePage({
             icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>}
           />
           <LiveVisitorCard />
+          </div>
         </div>
 
         {/* Traffic chart */}
